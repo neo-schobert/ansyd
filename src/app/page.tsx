@@ -1,65 +1,56 @@
-import Image from "next/image";
+// app/page.tsx
 
-export default function Home() {
+import { TextBlock } from "@/components/TextBlock";
+
+export default function HomePage() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="min-h-screen bg-linear-to-b from-gray-50 via-gray-100 to-gray-50 p-6 pt-40">
+      <div className="max-w-5xl mx-auto space-y-12">
+        <h1 className="text-5xl font-bold text-gray-900 text-center mb-12">
+          ANSYD
+        </h1>
+
+        <TextBlock>
+          Ce site regroupe l’ensemble des labs réalisés dans le cadre de la
+          matière ANSYD. Chaque lab contient le code source en Go correspondant
+          aux exercices demandés ainsi que la possibilité de visualiser les
+          résultats en direct via le backend sur Google Cloud Run.
+        </TextBlock>
+
+        <TextBlock>
+          L’objectif du site est de centraliser les travaux pour faciliter la
+          consultation et la vérification par les enseignants. Chaque lab est
+          présenté avec un résumé de son contenu, les fichiers de code, et les
+          résultats générés lors de l’exécution.
+        </TextBlock>
+
+        <TextBlock>
+          <strong>Fonctionnement du backend :</strong>
+          <ul className="list-disc ml-6 mt-2">
+            <li>
+              Le backend est packagé dans un conteneur Docker et déployé sur
+              Google Cloud Run.
+            </li>
+            <li>
+              Chaque lab et chaque question correspond à une fonction Go déjà
+              implémentée sur le serveur.
+            </li>
+            <li>
+              Le site appelle ces fonctions via des endpoints spécifiques pour
+              récupérer le résultat de l’exécution.
+            </li>
+            <li>
+              Pendant l’exécution, les logs générés sont concaténés pour être
+              renvoyés en une seule réponse, permettant de visualiser
+              l’exécution complète sans nécessiter de multiples appels.
+            </li>
+            <li>
+              Cloud Run assure l’isolation et la scalabilité des fonctions,
+              garantissant que chaque exécution reste indépendante et sécurisée.
+            </li>
+          </ul>
+        </TextBlock>
+      </div>
     </div>
   );
 }

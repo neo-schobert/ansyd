@@ -1,0 +1,75 @@
+graph G {
+  // Layout plus compact en paysage
+  layout=neato;
+  overlap=false;
+  splines=true;
+  size="15,8";       // plus large que haut
+  ratio=fill;
+  nodesep=0.5;
+  ranksep=0.5;
+
+  // Style des noeuds
+  node [
+    shape=circle,
+    style=filled,
+    fillcolor=lightcoral,
+    color=darkred,
+    fontcolor=black,
+    fontsize=30,
+    fontname="Helvetica-Bold",
+    width=1.5,
+    height=1.5,
+    fixedsize=true
+  ];
+
+  // Style des arêtes
+  edge [
+    color=dimgray,
+    penwidth=2
+  ];
+
+  // Arêtes générées depuis la matrice (sans doublons)
+  0 -- 1;
+  0 -- 3;
+  0 -- 5;
+  0 -- 8;
+
+  1 -- 2;
+  1 -- 4;
+  1 -- 6;
+  1 -- 9;
+
+  2 -- 3;
+  2 -- 5;
+  2 -- 7;
+
+  3 -- 4;
+  3 -- 6;
+  3 -- 8;
+
+  4 -- 5;
+  4 -- 7;
+  4 -- 9;
+
+  5 -- 6;
+  5 -- 8;
+
+  6 -- 7;
+  6 -- 9;
+
+  7 -- 8;
+
+  8 -- 9;
+
+  // Labels explicites
+  0 [label="0"];
+  1 [label="1"];
+  2 [label="2"];
+  3 [label="3"];
+  4 [label="4"];
+  5 [label="5"];
+  6 [label="6"];
+  7 [label="7"];
+  8 [label="8"];
+  9 [label="9"];
+}

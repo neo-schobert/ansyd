@@ -1,0 +1,42 @@
+graph G {
+  // Taille globale du graphe
+  size="10,5";
+  ratio=fill;
+  nodesep=1.5;
+  ranksep=2.0;
+
+  // Style des noeuds
+  node [
+    shape=circle,
+    style=filled,
+    fillcolor=lightcoral, // couleur douce et visible
+    color=darkred,        // contour
+    fontcolor=black,      // texte lisible
+    fontsize=50,          // texte énorme
+    fontname="Helvetica-Bold",
+    width=2.5,            // noeuds très gros
+    height=2.5,
+    fixedsize=true
+  ];
+
+  // Style des arêtes
+  edge [
+    color=dimgray,
+    penwidth=4
+  ];
+
+  // Arêtes
+  0 -- 1;
+  0 -- 3;
+  1 -- 2;
+  1 -- 4;
+  2 -- 3;
+  3 -- 4;
+
+  // Labels explicites
+  0 [label="0"];
+  1 [label="1"];
+  2 [label="2"];
+  3 [label="3"];
+  4 [label="4"];
+}

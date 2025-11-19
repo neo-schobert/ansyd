@@ -19,7 +19,6 @@ const Lab3Page = () => {
   const [logClient12, setLogClient12] = useState("");
   const [logClient13, setLogClient13] = useState("");
   const isClientRunningRef = useRef(-1);
-  const mustSendFirstMessageRef = useRef(true);
   const rttsRef = useRef<
     { sendTimestamp: number; receivedTimestamp: number }[]
   >([]);
@@ -55,8 +54,7 @@ const Lab3Page = () => {
         reconnectTimeout = setTimeout(connect, 2000); // reconnect après 2s
       };
 
-      ws.onerror = (err) => {
-        console.error("WebSocket error", err);
+      ws.onerror = (_) => {
         ws.close(); // ferme pour déclencher onclose
       };
     };
@@ -467,12 +465,11 @@ func main() {
         </h2>
 
         <TextBlock>
-          On met cette fois ci un temps aléatoire entre 0 et 7000 ms pour tester
-          les erreurs de timeout côté client. On utilise la fonction{" "}
-          <code>time.Now()</code> avant de lancer le délai aléatoire puis on
-          utilise la fonction <code>time.Since()</code> après l&apos;envoi de la
-          réponse pour mesurer le temps écoulé. Si le temps écoulé dépasse 5
-          secondes, on affiche un message d&apos;erreur.
+          On utilise la fonction <code>time.Now()</code> avant d&apos;envoyer le
+          message au server puis on utilise la fonction{" "}
+          <code>time.Since()</code> une fois la réception du message du server.
+          Si le temps écoulé dépasse 5 secondes, on affiche un message
+          d&apos;erreur.
         </TextBlock>
 
         <CodeBlock
@@ -647,61 +644,65 @@ func main() {
           {`package main
 
 import (
+	"bufio"
 	"fmt"
-	"math/rand"
+	"math"
 	"net"
 	"time"
 )
 
-var rtts []float64 // RTTs mesurés côté “client”
-
-// Fonction serveur : envoie réponse après un délai aléatoire
-func sendResponse(conn *net.UDPConn, addr *net.UDPAddr, start time.Time) {
-	delay := rand.Intn(7000) // 0-7s
-	fmt.Printf("Server: Waiting %d ms before responding to %v\n", delay, addr)
-
-	time.Sleep(time.Duration(delay) * time.Millisecond)
-
-	_, err := conn.WriteToUDP([]byte("Hello UDP Client"), addr)
-	if err != nil {
-		fmt.Printf("Server error sending to %v: %v\n", addr, err)
-		return
-	}
-
-	// Serveur peut mesurer le RTT aussi si besoin, mais le client fera le timeout
-}
-
+var rtts []time.Duration // Slice globale pour stocker tous les RTTs
 
 func main() {
-
 	p := make([]byte, 2048)
-	addr := net.UDPAddr{
-		Port: 1234,
-		IP:   net.ParseIP("127.0.0.1"),
-	}
-
-	ser, err := net.ListenUDP("udp", &addr)
+	conn, err := net.Dial("udp", "127.0.0.1:1234")
 	if err != nil {
 		fmt.Printf("Some error %v\\n", err)
 		return
 	}
+	defer conn.Close()
 
 	for {
-		n, remoteaddr, err := ser.ReadFromUDP(p)
-		if err != nil {
-			fmt.Printf("Read error %v\\n", err)
-			continue
-		}
-
-		fmt.Printf("Received from %v: %s\\n", remoteaddr, string(p[:n]))
-
-		// Enregistre le moment où la requête arrive
 		start := time.Now()
 
-		// Lance la réponse asynchrone avec la mesure du temps
-		go sendResponse(ser, remoteaddr, start)
+		// Envoyer le message
+		fmt.Fprintf(conn, "Hi UDP Server, How are you doing?")
+
+		// Définir un timeout pour la lecture
+		conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+
+		_, err = bufio.NewReader(conn).Read(p)
+
+		// Mesure du temps écoulé
+		elapsed := time.Since(start)
+		rtts = append(rtts, elapsed)
+
+		if err != nil {
+			// Timeout
+			fmt.Printf("Packet lost or error: %v (took %.3fs)\\n", err, elapsed.Seconds())
+		} else {
+			fmt.Printf("Response took %.3fs\\n", elapsed.Seconds())
+		}
+
+		// Calcul de la moyenne et de l'écart-type
+		var sum float64
+		for _, rtt := range rtts {
+			sum += rtt.Seconds()
+		}
+		avg := sum / float64(len(rtts))
+
+		var variance float64
+		for _, rtt := range rtts {
+			variance += math.Pow(rtt.Seconds()-avg, 2)
+		}
+		stdev := math.Sqrt(variance / float64(len(rtts)))
+
+		fmt.Printf("Current RTT stats -> Average: %.3f s | StdDev: %.3f s\\n\\n", avg, stdev)
+
+		time.Sleep(1 * time.Second)
 	}
-}`}
+}
+`}
         </CodeBlock>
 
         <FloatingClientLog log={logClient11} targetId="client" />

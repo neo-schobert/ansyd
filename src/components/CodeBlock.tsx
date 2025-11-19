@@ -23,6 +23,8 @@ interface CodeBlockProps {
   rttsRef?: React.RefObject<
     { sendTimestamp: number; receivedTimestamp: number }[]
   >;
+  logUsedOutside?: boolean;
+  setLogUsedOutside?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 interface LabResponse {
@@ -45,6 +47,8 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   handleStopServers,
   runningServers,
   rttsRef,
+  logUsedOutside,
+  setLogUsedOutside,
 }) => {
   const isBrowser = typeof window !== "undefined";
   const logContainerRef = useRef<HTMLDivElement | null>(null);
@@ -55,8 +59,8 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   const [showSnackbarOpenClient, setShowSnackbarOpenClient] = useState(false);
   const [showSnackbarOpenServer, setShowSnackbarOpenServer] = useState(false);
   const [loading, setLoading] = useState(0);
-  const [shouldSend, setShouldSend] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const TIMEOUT_TIME = 1000; // en ms
 
   useEffect(() => {
     const handleResize = () => {
@@ -88,10 +92,31 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       isClientRunningRef?.current >= 0 &&
       setClientLogs
     ) {
+      if (setLogUsedOutside) {
+        setLogUsedOutside(true);
+      }
       setClientLogs[isClientRunningRef?.current]((prev) =>
         prev ? prev + "\n" + msg : msg
       );
     }
+  };
+
+  const calculateStats = () => {
+    const arr = rttsRef?.current;
+    if (!arr || arr.length === 0) return { average: 0, stdev: 0 };
+    let somme = 0;
+    for (const rtt of arr) {
+      somme += rtt.receivedTimestamp - rtt.sendTimestamp;
+    }
+    const average = somme / arr.length;
+
+    let variance = 0;
+    for (const rtt of arr) {
+      const rttMs = rtt.receivedTimestamp - rtt.sendTimestamp;
+      variance += Math.pow(rttMs - average, 2);
+    }
+    const stdev = Math.sqrt(variance / arr.length);
+    return { average, stdev };
   };
 
   const treatMessageClient = (now: number) => {
@@ -100,20 +125,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
 
     const last = arr[arr.length - 1];
 
-    let somme = 0;
-    for (const rtt of arr) {
-      somme += rtt.receivedTimestamp - rtt.sendTimestamp;
-    }
-    const average = somme / arr.length;
-
-    let variance = 0;
-
-    for (const rtt of arr) {
-      const rttMs = rtt.receivedTimestamp - rtt.sendTimestamp;
-      variance += Math.pow(rttMs - average, 2);
-    }
-
-    const stdev = Math.sqrt(variance / arr.length);
+    const { average, stdev } = calculateStats();
 
     const elapsedMs = now - last.sendTimestamp;
 
@@ -162,61 +174,6 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     }
   };
 
-  useEffect(() => {
-    const arr = rttsRef?.current;
-    if (!arr || arr.length === 0) return;
-    const now = Date.now();
-    const last = arr[arr.length - 1];
-
-    if (
-      shouldSend &&
-      isClientRunningRef?.current === 3 &&
-      last.receivedTimestamp === 0
-    ) {
-      last.receivedTimestamp = now;
-      setShouldSend(false);
-
-      let somme = 0;
-      for (const rtt of arr) {
-        somme += rtt.receivedTimestamp - rtt.sendTimestamp;
-      }
-      const average = somme / arr.length;
-
-      let variance = 0;
-
-      for (const rtt of arr) {
-        const rttMs = rtt.receivedTimestamp - rtt.sendTimestamp;
-        variance += Math.pow(rttMs - average, 2);
-      }
-      const elapsedMs = now - last.sendTimestamp;
-
-      const elapsedSec = elapsedMs / 1000;
-      const stdev = Math.sqrt(variance / arr.length);
-      appendClientLog(`Packet lost or error: (took ${elapsedSec}s)`);
-
-      appendClientLog(
-        `Current RTT stats -> Average: ${average / 1000} s | StdDev: ${
-          stdev / 1000
-        } s`
-      );
-
-      setTimeout(() => {
-        appendClientLog("Client Send: Hi UDP Server, How are you doing?");
-        if (wsRef && wsRef.current) {
-          rttsRef?.current?.push({
-            sendTimestamp: Date.now(),
-            receivedTimestamp: 0,
-          });
-
-          setTimeout(() => {
-            setShouldSend(true);
-          }, 1000);
-          wsRef.current.send("Hi UDP Server, How are you doing?");
-        }
-      }, 1000);
-    }
-  }, [shouldSend]);
-
   const sendMsgClient = (now: number) => {
     if (!wsRef || !wsRef.current) return appendClientLog("❌ wsRef non défini");
     const ws = wsRef.current;
@@ -226,16 +183,12 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       if (!continueSending) return;
       appendClientLog("Client Send: Hi UDP Server, How are you doing?");
       if (isClientRunningRef && isClientRunningRef?.current >= 0) {
+        const now = Date.now();
         rttsRef?.current?.push({
-          sendTimestamp: Date.now(),
+          sendTimestamp: now,
           receivedTimestamp: 0,
         });
-        setShouldSend(false);
-
-        setTimeout(() => {
-          setShouldSend(true);
-        }, 1000);
-        ws.send("Hi UDP Server, How are you doing?");
+        ws.send("Hi UDP Server, How are you doing?|" + now);
       }
     }
   };
@@ -262,17 +215,62 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       const ws = wsRef.current;
 
       if (ws.readyState === WebSocket.OPEN) {
+        const now = Date.now();
         appendLog("Client Send: Hi UDP Server, How are you doing?");
         rttsRef?.current?.push({
-          sendTimestamp: Date.now(),
+          sendTimestamp: now,
           receivedTimestamp: 0,
         });
-        setShouldSend(false);
+        ws.send("Hi UDP Server, How are you doing?|" + now);
 
-        setTimeout(() => {
-          setShouldSend(true);
-        }, 1000);
-        ws.send("Hi UDP Server, How are you doing?");
+        const step = 10; // ms
+
+        const interval = setInterval(() => {
+          if (!wsRef || !wsRef.current || !isClientRunningRef) {
+            clearInterval(interval);
+            return;
+          }
+          const arr = rttsRef?.current;
+          if (!arr || arr.length === 0) return;
+          const now = Date.now();
+
+          arr
+            .filter((rtt) => rtt.receivedTimestamp === 0)
+            .forEach((rtt) => {
+              const elapsedMs = now - rtt.sendTimestamp;
+              if (elapsedMs >= TIMEOUT_TIME) {
+                rtt.receivedTimestamp = now;
+                appendLog(
+                  "Packet lost or error: (took " + elapsedMs / 1000 + "s)"
+                );
+
+                const { average, stdev } = calculateStats();
+                appendLog(
+                  `Current RTT stats -> Average: ${
+                    average / 1000
+                  } s | StdDev: ${stdev / 1000} s`
+                );
+
+                setTimeout(() => {
+                  if (wsRef && wsRef.current) {
+                    const ws = wsRef.current;
+                    if (ws.readyState === WebSocket.OPEN) {
+                      appendLog(
+                        "Client Send: Hi UDP Server, How are you doing?"
+                      );
+
+                      const now = Date.now();
+                      rttsRef?.current?.push({
+                        sendTimestamp: now,
+                        receivedTimestamp: 0,
+                      });
+                      ws.send("Hi UDP Server, How are you doing?|" + now);
+                    }
+                  }
+                }, 1000);
+              }
+            });
+        }, step);
       }
     };
 
@@ -305,6 +303,24 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     if (isClientRunningRef && isClientRunningRef.current === endpoint) {
       isClientRunningRef.current = -1;
     }
+
+    if (endpoint === 3) {
+      setLoading(7500);
+
+      const step = 100; // ms
+      let current = 7500;
+
+      const interval = setInterval(() => {
+        current -= step;
+        setLoading(current);
+
+        if (current <= 0) {
+          clearInterval(interval);
+          setLoading(0);
+        }
+      }, step);
+    }
+
     setTimeout(() => {
       appendLog("⏹ Client arrêté");
     }, 1000);
@@ -333,37 +349,32 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
           setShowSnackbarOpenClient(true);
         }
         setRunning(true);
+
         wsRef.current.onmessage = (event: MessageEvent) => {
-          let sendClient = true;
-          const delay = event.data.split("|")[1];
-          const now = Date.now();
+          if (event.data.startsWith("Server Send: Hello UDP Client")) {
+            appendLog("Server Send: Hello UDP Client");
+            const delay = event.data.split("|")[2];
+            const start = event.data.split("|")[1];
+            const now = Date.now();
 
-          if (isClientRunningRef?.current != 3 || delay <= 1000) {
-            const arr = rttsRef?.current;
-            if (!arr || arr.length === 0) return;
+            if (delay <= TIMEOUT_TIME) {
+              if (isClientRunningRef?.current === 3) {
+                const arr = rttsRef?.current;
+                if (!arr || arr.length === 0) return;
 
-            const last = arr[arr.length - 1];
-            if (last.receivedTimestamp === 0) {
-              last.receivedTimestamp = now;
-            }
-          } else {
-            sendClient = false;
-          }
-          if (event.data.startsWith("Server reply: ")) {
-            appendLog(event.data);
-          } else {
-            appendLog(
-              event.data.startsWith("Server Send: Hello UDP Client")
-                ? "Server Send: Hello UDP Client"
-                : event.data
-            );
-            setTimeout(() => {
-              if (event.data.startsWith("Server Send: Hello UDP Client")) {
-                if (sendClient) {
-                  sendMsgClient(now);
+                const dedicatedMsg = arr.find(
+                  (rtt) => rtt.sendTimestamp.toString() === start
+                );
+                if (dedicatedMsg) {
+                  dedicatedMsg.receivedTimestamp = now;
                 }
               }
-            }, 1000);
+              setTimeout(() => {
+                sendMsgClient(now);
+              }, 1000);
+            }
+          } else {
+            appendLog(event.data);
           }
         };
       }
@@ -433,8 +444,6 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     return (-c / 2) * (t * (t - 2) - 1) + b;
   };
 
-  if (isClient !== undefined && !isClient && !setClientLogs) return null;
-
   return (
     <div
       id={id ? id : undefined}
@@ -452,7 +461,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         </code>
       </pre>
 
-      {wsRef && isClient && (
+      {wsRef && isClient && loading <= 0 && (
         <button
           onClick={handleExecute}
           className={`mt-3 px-4 py-2 rounded-lg text-white transition ${

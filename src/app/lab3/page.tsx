@@ -21,9 +21,10 @@ const Lab3Page = () => {
   const [logClient11, setLogClient11] = useState("");
   const [logClient12, setLogClient12] = useState("");
   const [logClient13, setLogClient13] = useState("");
+  const [logUsedOutsideClient11, setLogUsedOutsideClient11] = useState(false);
   const isClientRunningRef = useRef(-1);
   const rttsRef = useRef<
-    { sendTimestamp: number; receivedTimestamp: number }[]
+    { sendTimestamp: number; receivedTimestamp: number; isLocal: boolean }[]
   >([]);
 
   const [runningClient3, setRunningClient3] = useState(false);
@@ -278,6 +279,7 @@ func main() {
           setRunning={setRunningServer5}
           handleStopServers={handleStopServers}
           rttsRef={rttsRef}
+          setLogUsedOutside={setLogUsedOutsideClient11}
         >
           {`package main
 
@@ -422,6 +424,7 @@ func main() {
           setRunning={setRunningServer8}
           handleStopServers={handleStopServers}
           rttsRef={rttsRef}
+          setLogUsedOutside={setLogUsedOutsideClient11}
         >
           {`package main
 
@@ -649,6 +652,8 @@ func main() {
           runningServers={[runningServer5, runningServer8]}
           handleStopServers={handleStopClients}
           rttsRef={rttsRef}
+          logUsedOutside={logUsedOutsideClient11}
+          setLogUsedOutside={setLogUsedOutsideClient11}
         >
           {`package main
 
@@ -678,7 +683,7 @@ func main() {
 		fmt.Fprintf(conn, "Hi UDP Server, How are you doing?")
 
 		// Définir un timeout pour la lecture
-		conn.SetReadDeadline(time.Now().Add(1 * time.Second))
+		conn.SetReadDeadline(time.Now().Add(4 * time.Second))
 
 		_, err = bufio.NewReader(conn).Read(p)
 

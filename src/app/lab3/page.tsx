@@ -10,25 +10,28 @@ import { useEffect, useRef, useState } from "react";
 
 const Lab3Page = () => {
   const wsRef = useRef<WebSocket | null>(null);
-  const [log, setLog] = useState("");
-  const [log1, setLog1] = useState("");
-  const [log2, setLog2] = useState("");
-  const [log3, setLog3] = useState("");
-  const [log4, setLog4] = useState("");
-  const [log5, setLog5] = useState("");
-  const [log6, setLog6] = useState("");
-  const [log7, setLog7] = useState("");
-  const isClientRunningRef = useRef(false);
-  const [running, setRunning] = useState(false);
-  const [running1, setRunning1] = useState(false);
-  const [running2, setRunning2] = useState(false);
-  const [running3, setRunning3] = useState(false);
-  const [running4, setRunning4] = useState(false);
-  const [running5, setRunning5] = useState(false);
-  const [running6, setRunning6] = useState(false);
-  const [running7, setRunning7] = useState(false);
+  const [logClient3, setLogClient3] = useState("");
+  const [logServer5, setLogServer5] = useState("");
+  const [logServer8, setLogServer8] = useState("");
+  const [logClient9, setLogClient9] = useState("");
+  const [logClient10, setLogClient10] = useState("");
+  const [logClient11, setLogClient11] = useState("");
+  const [logClient12, setLogClient12] = useState("");
+  const [logClient13, setLogClient13] = useState("");
+  const isClientRunningRef = useRef(-1);
+  const mustSendFirstMessageRef = useRef(true);
+
+  const [runningClient3, setRunningClient3] = useState(false);
+  const [runningServer5, setRunningServer5] = useState(false);
+  const [runningServer8, setRunningServer8] = useState(false);
+  const [runningClient9, setRunningClient9] = useState(false);
+  const [runningClient10, setRunningClient10] = useState(false);
+  const [runningClient11, setRunningClient11] = useState(false);
+  const [runningClient12, setRunningClient12] = useState(false);
+  const [runningClient13, setRunningClient13] = useState(false);
 
   const [stopServersSnackBar, setStopServersSnackBar] = useState("");
+  const [stopClientsSnackBar, setStopClientsSnackBar] = useState("");
 
   useEffect(() => {
     let ws: WebSocket;
@@ -65,18 +68,10 @@ const Lab3Page = () => {
 
   const handleStopServers = () => {
     if (wsRef.current) {
-      wsRef.current.send("stopAll");
+      wsRef.current.send("stopAllServers");
       wsRef.current.onmessage = () => {};
     }
-    const runningServers = [
-      running1,
-      running2,
-      running3,
-      running4,
-      running5,
-      running6,
-      running7,
-    ];
+    const runningServers = [runningServer5, runningServer8];
     const snackbarString = `Le${
       runningServers.filter((r) => r).length > 1 ? "s" : ""
     } serveur${runningServers.filter((r) => r).length > 1 ? "s" : ""} de${
@@ -93,13 +88,41 @@ const Lab3Page = () => {
     if (runningServers.some((r) => r)) {
       setStopServersSnackBar(snackbarString);
     }
-    setRunning1(false);
-    setRunning2(false);
-    setRunning3(false);
-    setRunning4(false);
-    setRunning5(false);
-    setRunning6(false);
-    setRunning7(false);
+    setRunningServer5(false);
+    setRunningServer8(false);
+  };
+
+  const handleStopClients = () => {
+    const runningClients = [
+      runningClient3,
+      runningClient9,
+      runningClient10,
+      runningClient11,
+      runningClient12,
+      runningClient13,
+    ];
+    const snackbarString = `Le${
+      runningClients.filter((r) => r).length > 1 ? "s" : ""
+    } client${runningClients.filter((r) => r).length > 1 ? "s" : ""} de${
+      runningClients.filter((r) => r).length > 1
+        ? "s questions"
+        : " la question"
+    } ${runningClients
+      .filter((r) => r)
+      .map((r, idx) => (idx === 0 ? "3" : `${idx + 8}`))
+      .join(", ")} ${
+      runningClients.filter((r) => r).length > 1 ? "ont" : "a"
+    } été arrêté${runningClients.filter((r) => r).length > 1 ? "s" : ""}.`;
+
+    if (runningClients.some((r) => r)) {
+      setStopClientsSnackBar(snackbarString);
+    }
+    setRunningClient3(false);
+    setRunningClient9(false);
+    setRunningClient10(false);
+    setRunningClient11(false);
+    setRunningClient12(false);
+    setRunningClient13(false);
   };
 
   return (
@@ -157,23 +180,17 @@ n, err := reader.Read(p)
           et lit la réponse. Les logs s&apos;affichent en direct via WebSocket.
         </TextBlock>
         <CodeBlock
-          id="client"
+          id="client3"
           wsRef={wsRef}
+          endpoint={0}
           isClient
-          log={log}
-          setLog={setLog}
+          log={logClient3}
+          setLog={setLogClient3}
           isClientRunningRef={isClientRunningRef}
-          running={running}
-          setRunning={setRunning}
-          runningServers={[
-            running1,
-            running2,
-            running3,
-            running4,
-            running5,
-            running6,
-            running7,
-          ]}
+          running={runningClient3}
+          setRunning={setRunningClient3}
+          runningServers={[runningServer5, runningServer8]}
+          handleStopServers={handleStopClients}
         >
           {`package main
 
@@ -205,7 +222,7 @@ func main() {
 }`}
         </CodeBlock>
 
-        <FloatingClientLog log={log} targetId="client" />
+        <FloatingClientLog log={logClient3} targetId="client" />
 
         <h2 className="text-2xl font-semibold text-gray-800">
           2 — UDP Server{" "}
@@ -232,12 +249,19 @@ func main() {
           endpoint="serverq5"
           wsRef={wsRef}
           isClient={false}
-          log={log1}
-          setLog={setLog1}
-          setClientLog={setLog}
+          log={logServer5}
+          setLog={setLogServer5}
+          setClientLogs={[
+            setLogClient3,
+            setLogClient9,
+            setLogClient10,
+            setLogClient11,
+            setLogClient12,
+            setLogClient13,
+          ]}
           isClientRunningRef={isClientRunningRef}
-          running={running1}
-          setRunning={setRunning1}
+          running={runningServer5}
+          setRunning={setRunningServer5}
           handleStopServers={handleStopServers}
         >
           {`package main
@@ -368,12 +392,19 @@ func main() {
           endpoint="serverq8"
           wsRef={wsRef}
           isClient={false}
-          log={log2}
-          setLog={setLog2}
-          setClientLog={setLog}
+          log={logServer8}
+          setLog={setLogServer8}
+          setClientLogs={[
+            setLogClient3,
+            setLogClient9,
+            setLogClient10,
+            setLogClient11,
+            setLogClient12,
+            setLogClient13,
+          ]}
           isClientRunningRef={isClientRunningRef}
-          running={running2}
-          setRunning={setRunning2}
+          running={runningServer8}
+          setRunning={setRunningServer8}
           handleStopServers={handleStopServers}
         >
           {`package main
@@ -386,7 +417,7 @@ import (
 )
 
 func sendResponse(conn *net.UDPConn, addr *net.UDPAddr) {
-	delay := rand.Intn(2000)
+	delay := rand.Intn(7000)
 	fmt.Printf("Waiting %d ms before responding to %v\\n", delay, addr)
 
 	time.Sleep(time.Duration(delay) * time.Millisecond)
@@ -420,6 +451,8 @@ func main() {
 }`}
         </CodeBlock>
 
+        <FloatingClientLog log={logClient9} targetId="client" />
+
         <h2 className="text-xl font-semibold text-gray-800">
           Question 9 — Measure Connectivity RTT
         </h2>
@@ -434,16 +467,17 @@ func main() {
         </TextBlock>
 
         <CodeBlock
-          endpoint="serverq9"
+          id="client9"
+          endpoint={1}
           wsRef={wsRef}
-          isClient={false}
-          log={log3}
-          setLog={setLog3}
-          setClientLog={setLog}
+          isClient
+          log={logClient9}
+          setLog={setLogClient9}
           isClientRunningRef={isClientRunningRef}
-          running={running3}
-          setRunning={setRunning3}
-          handleStopServers={handleStopServers}
+          running={runningClient9}
+          setRunning={setRunningClient9}
+          runningServers={[runningServer5, runningServer8]}
+          handleStopServers={handleStopClients}
         >
           {`package main
 
@@ -509,6 +543,8 @@ func main() {
 }`}
         </CodeBlock>
 
+        <FloatingClientLog log={logClient9} targetId="client" />
+
         <h2 className="text-xl font-semibold text-gray-800">
           Question 10 — Store RTT Measurements
         </h2>
@@ -519,16 +555,17 @@ func main() {
         </TextBlock>
 
         <CodeBlock
-          endpoint="serverq10"
+          id="client10"
+          endpoint={2}
           wsRef={wsRef}
-          isClient={false}
-          log={log4}
-          setLog={setLog4}
-          setClientLog={setLog}
+          isClient
+          log={logClient10}
+          setLog={setLogClient10}
           isClientRunningRef={isClientRunningRef}
-          running={running4}
-          setRunning={setRunning4}
-          handleStopServers={handleStopServers}
+          running={runningClient10}
+          setRunning={setRunningClient10}
+          runningServers={[runningServer5, runningServer8]}
+          handleStopServers={handleStopClients}
         >
           {`package main
 
@@ -615,6 +652,89 @@ func main() {
 	}
 }`}
         </CodeBlock>
+
+        <FloatingClientLog log={logClient10} targetId="client" />
+
+        <h2 className="text-xl font-semibold text-gray-800">
+          Question 11 — Timeout Condition
+        </h2>
+
+        <TextBlock>h</TextBlock>
+
+        <CodeBlock
+          id="client11"
+          endpoint={3}
+          wsRef={wsRef}
+          isClient
+          log={logClient11}
+          setLog={setLogClient11}
+          isClientRunningRef={isClientRunningRef}
+          running={runningClient11}
+          setRunning={setRunningClient11}
+          runningServers={[runningServer5, runningServer8]}
+          handleStopServers={handleStopClients}
+        >
+          {`package main
+
+import (
+	"fmt"
+	"math/rand"
+	"net"
+	"time"
+)
+
+var rtts []float64 // RTTs mesurés côté “client”
+
+// Fonction serveur : envoie réponse après un délai aléatoire
+func sendResponse(conn *net.UDPConn, addr *net.UDPAddr, start time.Time) {
+	delay := rand.Intn(7000) // 0-7s
+	fmt.Printf("Server: Waiting %d ms before responding to %v\n", delay, addr)
+
+	time.Sleep(time.Duration(delay) * time.Millisecond)
+
+	_, err := conn.WriteToUDP([]byte("Hello UDP Client"), addr)
+	if err != nil {
+		fmt.Printf("Server error sending to %v: %v\n", addr, err)
+		return
+	}
+
+	// Serveur peut mesurer le RTT aussi si besoin, mais le client fera le timeout
+}
+
+
+func main() {
+
+	p := make([]byte, 2048)
+	addr := net.UDPAddr{
+		Port: 1234,
+		IP:   net.ParseIP("127.0.0.1"),
+	}
+
+	ser, err := net.ListenUDP("udp", &addr)
+	if err != nil {
+		fmt.Printf("Some error %v\\n", err)
+		return
+	}
+
+	for {
+		n, remoteaddr, err := ser.ReadFromUDP(p)
+		if err != nil {
+			fmt.Printf("Read error %v\\n", err)
+			continue
+		}
+
+		fmt.Printf("Received from %v: %s\\n", remoteaddr, string(p[:n]))
+
+		// Enregistre le moment où la requête arrive
+		start := time.Now()
+
+		// Lance la réponse asynchrone avec la mesure du temps
+		go sendResponse(ser, remoteaddr, start)
+	}
+}`}
+        </CodeBlock>
+
+        <FloatingClientLog log={logClient11} targetId="client" />
       </div>
       <Snackbar
         variant="soft"
@@ -640,6 +760,31 @@ func main() {
         }
       >
         ⚠️ {stopServersSnackBar}
+      </Snackbar>
+      <Snackbar
+        variant="soft"
+        color="danger"
+        open={stopClientsSnackBar !== ""}
+        onClose={() => {
+          setStopClientsSnackBar("");
+        }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        startDecorator={<ExclamationTriangleIcon />}
+        autoHideDuration={3000}
+        endDecorator={
+          <Button
+            onClick={() => {
+              setStopClientsSnackBar("");
+            }}
+            size="sm"
+            variant="soft"
+            color="danger"
+          >
+            Fermer
+          </Button>
+        }
+      >
+        ⚠️ {stopClientsSnackBar}
       </Snackbar>
     </div>
   );

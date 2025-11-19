@@ -3,19 +3,19 @@ import React, { useState, useEffect, useRef } from "react";
 import Prism from "prismjs";
 import "prismjs/components/prism-go";
 import "prismjs/themes/prism-okaidia.css";
-import { Button, Snackbar } from "@mui/joy";
+import { Button, CircularProgress, Snackbar } from "@mui/joy";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
 interface CodeBlockProps {
   id?: string;
   children: string;
-  endpoint?: string;
+  endpoint?: string | number;
   wsRef?: React.RefObject<WebSocket | null>;
   isClient?: boolean; // true = client, false = server
   log?: string;
   setLog?: React.Dispatch<React.SetStateAction<string>>;
-  setClientLog?: React.Dispatch<React.SetStateAction<string>>;
-  isClientRunningRef?: React.RefObject<boolean>;
+  setClientLogs?: React.Dispatch<React.SetStateAction<string>>[];
+  isClientRunningRef?: React.RefObject<number>;
   running: boolean;
   setRunning: React.Dispatch<React.SetStateAction<boolean>>;
   handleStopServers?: () => void;
@@ -35,7 +35,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   isClient,
   log,
   setLog,
-  setClientLog,
+  setClientLogs,
   isClientRunningRef,
   running,
   setRunning,
@@ -50,6 +50,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   }
   const [showSnackbarOpenClient, setShowSnackbarOpenClient] = useState(false);
   const [showSnackbarOpenServer, setShowSnackbarOpenServer] = useState(false);
+  const [loading, setLoading] = useState(0);
 
   useEffect(() => {
     Prism.highlightAll();
@@ -67,31 +68,45 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     setLocalLog((prev) => (prev ? prev + "\n" + msg : msg));
 
   const appendClientLog = (msg: string) => {
-    if (setClientLog) setClientLog((prev) => (prev ? prev + "\n" + msg : msg));
+    if (
+      isClientRunningRef &&
+      isClientRunningRef?.current >= 0 &&
+      setClientLogs &&
+      setClientLogs[isClientRunningRef?.current]
+    ) {
+      setClientLogs[isClientRunningRef?.current]((prev) =>
+        prev ? prev + "\n" + msg : msg
+      );
+    }
   };
 
   const sendMsgClient = () => {
     if (!wsRef || !wsRef.current) return appendClientLog("❌ wsRef non défini");
     const ws = wsRef.current;
 
-    if (ws.readyState === WebSocket.OPEN && isClientRunningRef?.current) {
+    if (ws.readyState === WebSocket.OPEN) {
       appendClientLog("Client Send: Hi UDP Server, How are you doing?");
-      ws.send("Hi UDP Server, How are you doing?");
+      if (isClientRunningRef && isClientRunningRef?.current >= 0) {
+        ws.send("Hi UDP Server, How are you doing?");
+      }
     }
   };
 
   const startWebSocketClient = () => {
-    if (!wsRef || !wsRef.current) return appendLog("❌ wsRef non défini");
-    setRunning(true);
+    if (
+      !wsRef ||
+      !wsRef.current ||
+      !isClientRunningRef ||
+      typeof endpoint !== "number"
+    )
+      return appendLog("❌ wsRef non défini");
 
+    handleStopServers?.();
     if (runningServers?.every((r) => !r)) {
       setShowSnackbarOpenServer(true);
     }
 
-    if (isClientRunningRef) {
-      console.log("hey2", isClientRunningRef);
-      isClientRunningRef.current = true;
-    }
+    setRunning(true);
 
     const sendMsg = () => {
       if (!wsRef || !wsRef.current) return appendLog("❌ wsRef non défini");
@@ -103,14 +118,35 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       }
     };
 
-    // Premier envoi
-    sendMsg();
+    if (isClientRunningRef.current < 0) {
+      sendMsg();
+    } else {
+      setLoading(7500);
+
+      const step = 100; // ms
+      let current = 7500;
+
+      const interval = setInterval(() => {
+        current -= step;
+        setLoading(current);
+
+        if (current <= 0) {
+          clearInterval(interval);
+          setLoading(0);
+          sendMsg();
+        }
+      }, step);
+    }
+
+    isClientRunningRef.current = endpoint;
   };
 
   const stopWebSocket = () => {
     if (!wsRef) return appendLog("❌ wsRef non défini");
     setRunning(false);
-    if (isClientRunningRef) isClientRunningRef.current = false;
+    if (isClientRunningRef && isClientRunningRef.current === endpoint) {
+      isClientRunningRef.current = -1;
+    }
     setTimeout(() => {
       appendLog("⏹ Client arrêté");
     }, 1000);
@@ -135,7 +171,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       } else {
         if (handleStopServers) handleStopServers();
         wsRef.current.send("start" + endpoint);
-        if (!isClientRunningRef?.current) {
+        if (!isClientRunningRef || isClientRunningRef.current < 0) {
           setShowSnackbarOpenClient(true);
         }
         setRunning(true);
@@ -160,7 +196,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000); // 30s
 
-    if (!endpoint) {
+    if (!endpoint || typeof endpoint !== "string") {
       setLocalLog("❌ Endpoint non défini");
       return;
     }
@@ -263,7 +299,12 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         </button>
       )}
 
-      {isBrowser && localLog && (
+      {loading > 0 && (
+        <div className="mt-3 text-gray-600 font-medium flex items-center gap-2">
+          <CircularProgress /> Chargement en cours... ({loading} ms restante)
+        </div>
+      )}
+      {isBrowser && localLog && loading <= 0 && (
         <div
           ref={logContainerRef}
           className="mt-3 bg-gray-900 text-green-400 p-3 rounded-lg font-mono text-sm whitespace-pre-wrap overflow-y-auto"

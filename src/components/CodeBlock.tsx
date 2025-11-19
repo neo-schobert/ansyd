@@ -63,6 +63,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   const [isMobile, setIsMobile] = useState(false);
   const TIMEOUT_TIME = 4000; // en ms
   const timeoutIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const statIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -93,6 +94,10 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       clearInterval(timeoutIntervalRef.current);
       timeoutIntervalRef.current = null;
     }
+    if (!running && statIntervalRef.current) {
+      clearInterval(statIntervalRef.current);
+      statIntervalRef.current = null;
+    }
   }, [running]);
 
   const appendLog = (msg: string) =>
@@ -102,7 +107,8 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     if (
       isClientRunningRef &&
       isClientRunningRef?.current >= 0 &&
-      setClientLogs
+      setClientLogs &&
+      isClientRunningRef?.current !== 5
     ) {
       setClientLogs[isClientRunningRef?.current]((prev) =>
         prev ? prev + "\n" + msg : msg
@@ -111,21 +117,69 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   };
 
   const calculateStats = () => {
-    const arr = rttsRef?.current;
-    if (!arr || arr.length === 0) return { average: 0, stdev: 0 };
-    let somme = 0;
-    for (const rtt of arr) {
-      somme += rtt.receivedTimestamp - rtt.sendTimestamp;
+    const arr = rttsRef?.current.filter((rtt) => rtt.isLost || rtt.isSent);
+    if (!arr || arr.length === 0) {
+      return {
+        last: 0,
+        average: 0,
+        best: 0,
+        worst: 0,
+        stdev: 0,
+        lossPercent: 0,
+        sentCount: 0,
+      };
     }
-    const average = somme / arr.length;
+
+    let sum = 0;
+    let best = Number.POSITIVE_INFINITY;
+    let worst = 0;
+    let last = 0;
+
+    let sentCount = 0;
+    let lostCount = 0;
+
+    // on collecte tous les RTT (même ceux marqués lost) comme dans ta version simple
+    const allRtts: number[] = [];
+
+    for (const r of arr) {
+      if (r.isSent) sentCount++;
+      if (r.isLost) lostCount++;
+
+      const d = r.receivedTimestamp - r.sendTimestamp;
+      allRtts.push(d);
+      sum += d;
+
+      if (d < best) best = d;
+      if (d > worst) worst = d;
+    }
+
+    // last = dernier élément du tableau (même logique que before)
+    if (allRtts.length > 0) {
+      last = allRtts[allRtts.length - 1];
+    } else {
+      best = 0;
+    }
+
+    // moyenne et stdev CALCULÉES COMME AVANT (division par arr.length)
+    const average = sum / arr.length;
 
     let variance = 0;
-    for (const rtt of arr) {
-      const rttMs = rtt.receivedTimestamp - rtt.sendTimestamp;
-      variance += Math.pow(rttMs - average, 2);
+    for (const v of allRtts) {
+      variance += Math.pow(v - average, 2);
     }
     const stdev = Math.sqrt(variance / arr.length);
-    return { average, stdev };
+
+    const lossPercent = sentCount > 0 ? (lostCount / sentCount) * 100 : 0;
+
+    return {
+      last,
+      average,
+      best: best === Number.POSITIVE_INFINITY ? 0 : best,
+      worst,
+      stdev,
+      lossPercent,
+      sentCount,
+    };
   };
 
   const treatMessageClient = (now: number) => {
@@ -186,7 +240,6 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         if (elapsedMs >= TIMEOUT_TIME) {
           return false;
         } else {
-          console.log("hey");
           appendClientLog(`Response took ${elapsedSec}s`);
           appendClientLog(
             `Current RTT stats -> Average: ${average / 1000} s | StdDev: ${
@@ -201,6 +254,12 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
                 : ""
             }`
           );
+          return true;
+        }
+      case 5:
+        if (elapsedMs >= TIMEOUT_TIME) {
+          return false;
+        } else {
           return true;
         }
 
@@ -286,9 +345,11 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
               if (elapsedMs >= TIMEOUT_TIME) {
                 rtt.receivedTimestamp = now;
                 rtt.isLost = true;
-                appendLog(
-                  "Packet lost or error: (took " + elapsedMs / 1000 + "s)"
-                );
+                if (endpoint !== 5) {
+                  appendLog(
+                    "Packet lost or error: (took " + elapsedMs / 1000 + "s)"
+                  );
+                }
 
                 const countLost = arr.reduce(
                   (acc, rtt) => acc + (rtt.isLost ? 1 : 0),
@@ -301,19 +362,26 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
                 );
 
                 const { average, stdev } = calculateStats();
-                appendLog(
-                  `Current RTT stats -> Average: ${
-                    average / 1000
-                  } s | StdDev: ${stdev / 1000} s${
-                    countLost !== undefined &&
-                    countSent !== undefined &&
-                    countSent !== 0
-                      ? " | Loss: " + (countLost / countSent) * 100
-                      : countSent === 0
-                      ? " | Loss: +inf"
-                      : ""
-                  }`
-                );
+                if (endpoint !== 5) {
+                  appendLog(
+                    `Current RTT stats -> Average: ${
+                      average / 1000
+                    } s | StdDev: ${stdev / 1000} s${
+                      countLost !== undefined &&
+                      countSent !== undefined &&
+                      countSent !== 0
+                        ? " | Loss: " +
+                          (countLost / countSent) * 100 +
+                          " | Sent: " +
+                          countSent +
+                          " | Lost: " +
+                          countLost
+                        : countSent === 0
+                        ? " | Loss: +inf"
+                        : ""
+                    }`
+                  );
+                }
 
                 setTimeout(() => {
                   if (wsRef && wsRef.current) {
@@ -339,6 +407,43 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         }, step);
 
         timeoutIntervalRef.current = interval;
+
+        if (endpoint < 5) return;
+        const stepStat = 2000; // ms
+
+        appendLog(
+          `\n${"Host".padEnd(15)} | ${"Pkt: Loss%   Sent".padEnd(
+            14
+          )} | RTT: Last   Avg   Best   Wrst   StDev`
+        );
+        appendLog("-".repeat(80));
+        const intervalStat = setInterval(() => {
+          if (!runningRef.current) {
+            // runningRef = ref miroir de ton state
+            clearInterval(interval);
+            timeoutIntervalRef.current = null;
+            return;
+          }
+
+          const { average, stdev, last, best, worst, lossPercent, sentCount } =
+            calculateStats();
+
+          // helper pour arrondir comme round2()
+
+          const line =
+            `127.0.0.1:1234`.padEnd(15) +
+            " |    " +
+            `${lossPercent.toFixed(1)}%`.padStart(6) +
+            ` ${String(sentCount).padStart(4)}    |     ` +
+            `${(last / 1000).toFixed(1).padStart(5)} ` +
+            `${(average / 1000).toFixed(1).padStart(5)} ` +
+            `${(best / 1000).toFixed(1).padStart(6)} ` +
+            `${(worst / 1000).toFixed(1).padStart(6)} ` +
+            `${(stdev / 1000).toFixed(1).padStart(6)}`;
+          appendLog(line);
+        }, stepStat);
+
+        statIntervalRef.current = intervalStat;
       }
     };
 

@@ -825,7 +825,7 @@ func main() {
 
         <CodeBlock
           id="client13"
-          endpoint={4}
+          endpoint={5}
           wsRef={wsRef}
           isClient
           log={logClient13}
@@ -847,7 +847,62 @@ import (
   "time"
 )
 
-var rtts []time.Duration // Slice globale pour stocker tous les RTTs
+var (
+	rtts      []float64
+	sentCount int
+	lostCount int
+)
+
+
+func printStats(serverAddr *net.UDPAddr) {
+  // En-tête (une seule fois)
+  fmt.Printf("\\n%-15s | %-14s | %-34s\\n", "Host", "Pkt: Loss%% Sent", "RTT: Last Avg Best Wrst StDev")
+  fmt.Println(strings.Repeat("-", 70))  
+  for {
+  	time.Sleep(2 * time.Second) 
+  	// Rien à afficher
+  	if len(rtts) == 0 && sentCount == 0 {
+  		continue
+  	} 
+  	// Calculs
+  	var sum, best, worst float64
+  	best = math.MaxFloat64
+  	worst = 0
+  	last := 0.0 
+  	for _, r := range rtts {
+  		sum += r
+  		if r < best {
+  			best = r
+  		}
+  		if r > worst {
+  			worst = r
+  		}
+  	} 
+  	if len(rtts) > 0 {
+  		last = rtts[len(rtts)-1]
+  	} 
+  	avg := 0.0
+  	variance := 0.0
+  	if len(rtts) > 0 {
+  		avg = sum / float64(len(rtts))
+  		for _, r := range rtts {
+  			variance += math.Pow(r-avg, 2)
+  		}
+  		variance /= float64(len(rtts))
+  	} 
+  	stdev := math.Sqrt(variance)  
+  	lossPercent := 0.0
+  	if sentCount > 0 {
+  		lossPercent = float64(lostCount) / float64(sentCount) * 100
+  	} 
+  	// Affichage
+  	fmt.Printf("%-15s | %5.1f%% %4d      | %5.1f %5.1f %5.1f %5.1f %5.1f\\n",
+  		serverAddr.String(),
+  		round2(lossPercent),
+  		sentCount,
+  		round2(last), round2(avg), round2(best), round2(worst), round2(stdev))
+  }
+}
 
 func main() {
   p := make([]byte, 2048)
@@ -856,42 +911,46 @@ func main() {
   	fmt.Printf("Some error %v\\n", err)
   	return
   }
-  defer conn.Close()  
-  sentCount := 0
-  lostCount := 0  
-  for {
-  	start := time.Now() 
-  	// Envoyer le message
-  	fmt.Fprintf(conn, "Hi UDP Server, How are you doing?")  
-  	// Définir un timeout pour la lecture
-  	conn.SetReadDeadline(time.Now().Add(4 * time.Second)) 
-  	_, err = bufio.NewReader(conn).Read(p)  
-  	// Mesure du temps écoulé
-  	elapsed := time.Since(start)
-  	rtts = append(rtts, elapsed)  
-  	if err != nil {
-  		// Timeout
-      lostCount++
-  		fmt.Printf("Packet lost or error: %v (took %v s)\\n", err, elapsed.Seconds())
-  	} else {
-      sentCount++
-  		fmt.Printf("Response took %v s\\n", elapsed.Seconds())
-  	} 
-  	// Calcul de la moyenne et de l'écart-type
-  	var sum float64
-  	for _, rtt := range rtts {
-  		sum += rtt.Seconds()
-  	}
-  	avg := sum / float64(len(rtts)) 
-  	var variance float64
-  	for _, rtt := range rtts {
-  		variance += math.Pow(rtt.Seconds()-avg, 2)
-  	}
-  	stdev := math.Sqrt(variance / float64(len(rtts))) 
-    lossPercent := float64(lostCount) / float64(sentCount) * 100  
-    fmt.Printf("Current RTT stats -> Average: %v s | StdDev: %v s | Loss: %v\\n\\n",avg, stdev, lossPercent)  
-  	time.Sleep(1 * time.Second)
-  }
+  defer conn.Close()   
+  go func() {
+    for {
+    	start := time.Now() 
+    	// Envoyer le message
+    	fmt.Fprintf(conn, "Hi UDP Server, How are you doing?")  
+    	// Définir un timeout pour la lecture
+    	conn.SetReadDeadline(time.Now().Add(4 * time.Second)) 
+    	_, err = bufio.NewReader(conn).Read(p)  
+    	// Mesure du temps écoulé
+    	elapsed := time.Since(start)
+    	rtts = append(rtts, elapsed)  
+    	if err != nil {
+    		// Timeout
+        lostCount++
+    		fmt.Printf("Packet lost or error: %v (took %v s)\\n", err, elapsed.Seconds())
+    	} else {
+        sentCount++
+    		fmt.Printf("Response took %v s\\n", elapsed.Seconds())
+    	} 
+    	// Calcul de la moyenne et de l'écart-type
+    	var sum float64
+    	for _, rtt := range rtts {
+    		sum += rtt.Seconds()
+    	}
+    	avg := sum / float64(len(rtts)) 
+    	var variance float64
+    	for _, rtt := range rtts {
+    		variance += math.Pow(rtt.Seconds()-avg, 2)
+    	}
+    	stdev := math.Sqrt(variance / float64(len(rtts))) 
+      lossPercent := float64(lostCount) / float64(sentCount) * 100  
+      fmt.Printf("Current RTT stats -> Average: %v s | StdDev: %v s | Loss: %v\\n\\n",avg, stdev, lossPercent)  
+    	time.Sleep(1 * time.Second)
+    }
+  }()
+
+
+	go printStats(serverAddr)
+
 }
 `}
         </CodeBlock>

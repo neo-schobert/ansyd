@@ -23,8 +23,6 @@ interface CodeBlockProps {
   rttsRef?: React.RefObject<
     { sendTimestamp: number; receivedTimestamp: number }[]
   >;
-  logUsedOutside?: boolean;
-  setLogUsedOutside?: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 interface LabResponse {
@@ -47,8 +45,6 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   handleStopServers,
   runningServers,
   rttsRef,
-  logUsedOutside,
-  setLogUsedOutside,
 }) => {
   const isBrowser = typeof window !== "undefined";
   const logContainerRef = useRef<HTMLDivElement | null>(null);
@@ -56,11 +52,12 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   if (setLog) {
     [localLog, setLocalLog] = [log!, setLog];
   }
+  const stopRef = useRef(false);
   const [showSnackbarOpenClient, setShowSnackbarOpenClient] = useState(false);
   const [showSnackbarOpenServer, setShowSnackbarOpenServer] = useState(false);
   const [loading, setLoading] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
-  const TIMEOUT_TIME = 1000; // en ms
+  const TIMEOUT_TIME = 4000; // en ms
 
   useEffect(() => {
     const handleResize = () => {
@@ -92,9 +89,6 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       isClientRunningRef?.current >= 0 &&
       setClientLogs
     ) {
-      if (setLogUsedOutside) {
-        setLogUsedOutside(true);
-      }
       setClientLogs[isClientRunningRef?.current]((prev) =>
         prev ? prev + "\n" + msg : msg
       );
@@ -209,6 +203,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
 
     setRunning(true);
     setLocalLog("");
+    stopRef.current = false;
 
     const sendMsg = () => {
       if (!wsRef || !wsRef.current) return appendLog("❌ wsRef non défini");
@@ -223,10 +218,11 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         });
         ws.send("Hi UDP Server, How are you doing?|" + now);
 
+        if (endpoint !== 3) return;
         const step = 10; // ms
 
         const interval = setInterval(() => {
-          if (!wsRef || !wsRef.current || !isClientRunningRef) {
+          if (stopRef.current) {
             clearInterval(interval);
             return;
           }
@@ -304,6 +300,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       isClientRunningRef.current = -1;
     }
 
+    stopRef.current = true;
     if (endpoint === 3) {
       setLoading(7500);
 
@@ -344,6 +341,8 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         wsRef.current.onmessage = () => {};
       } else {
         if (handleStopServers) handleStopServers();
+        setLocalLog("");
+
         wsRef.current.send("start" + endpoint);
         if (!isClientRunningRef || isClientRunningRef.current < 0) {
           setShowSnackbarOpenClient(true);
@@ -353,12 +352,13 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         wsRef.current.onmessage = (event: MessageEvent) => {
           if (event.data.startsWith("Server Send: Hello UDP Client")) {
             appendLog("Server Send: Hello UDP Client");
-            const delay = event.data.split("|")[2];
-            const start = event.data.split("|")[1];
             const now = Date.now();
 
-            if (delay <= TIMEOUT_TIME) {
-              if (isClientRunningRef?.current === 3) {
+            if (isClientRunningRef?.current === 3) {
+              const delay = event.data.split("|")[2];
+              const start = event.data.split("|")[1];
+
+              if (isClientRunningRef?.current === 3 && delay <= TIMEOUT_TIME) {
                 const arr = rttsRef?.current;
                 if (!arr || arr.length === 0) return;
 
@@ -368,11 +368,33 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
                 if (dedicatedMsg) {
                   dedicatedMsg.receivedTimestamp = now;
                 }
+
+                setTimeout(() => {
+                  sendMsgClient(now);
+                }, 1000);
+              }
+            } else if (isClientRunningRef?.current === 2) {
+              const arr = rttsRef?.current;
+              if (!arr || arr.length === 0) return;
+
+              const last = arr[arr.length - 1];
+              last.receivedTimestamp = now;
+              if (last) {
+                last.receivedTimestamp = now;
               }
               setTimeout(() => {
                 sendMsgClient(now);
               }, 1000);
+              return;
+            } else {
+              setTimeout(() => {
+                sendMsgClient(now);
+              }, 1000);
+              return;
             }
+          } else if (event.data.startsWith("Read a message from ")) {
+            const parts = event.data.split("|");
+            appendLog(parts[0]);
           } else {
             appendLog(event.data);
           }

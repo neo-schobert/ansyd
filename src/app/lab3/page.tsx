@@ -21,7 +21,6 @@ const Lab3Page = () => {
   const [logClient11, setLogClient11] = useState("");
   const [logClient12, setLogClient12] = useState("");
   const [logClient13, setLogClient13] = useState("");
-  const [logUsedOutsideClient11, setLogUsedOutsideClient11] = useState(false);
   const isClientRunningRef = useRef(-1);
   const rttsRef = useRef<
     { sendTimestamp: number; receivedTimestamp: number; isLocal: boolean }[]
@@ -279,7 +278,6 @@ func main() {
           setRunning={setRunningServer5}
           handleStopServers={handleStopServers}
           rttsRef={rttsRef}
-          setLogUsedOutside={setLogUsedOutsideClient11}
         >
           {`package main
 
@@ -424,7 +422,6 @@ func main() {
           setRunning={setRunningServer8}
           handleStopServers={handleStopServers}
           rttsRef={rttsRef}
-          setLogUsedOutside={setLogUsedOutsideClient11}
         >
           {`package main
 
@@ -637,7 +634,13 @@ func main() {
           Question 11 — Timeout Condition
         </h2>
 
-        <TextBlock>h</TextBlock>
+        <TextBlock>
+          Pour ajouter le timeout, on a juste comme prévu utilisé la méthode{" "}
+          <code>SetReadDeadline</code> sur la connexion UDP avec un timeout de 4
+          secondes avant la lecture. Ainsi, si la lecture dépasse ce délai, le
+          paquet est considéré comme perdu et une erreur de timeout est
+          renvoyée.
+        </TextBlock>
 
         <CodeBlock
           id="client11"
@@ -652,8 +655,6 @@ func main() {
           runningServers={[runningServer5, runningServer8]}
           handleStopServers={handleStopClients}
           rttsRef={rttsRef}
-          logUsedOutside={logUsedOutsideClient11}
-          setLogUsedOutside={setLogUsedOutsideClient11}
         >
           {`package main
 

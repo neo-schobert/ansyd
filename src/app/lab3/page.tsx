@@ -76,37 +76,6 @@ const Lab3Page = () => {
     };
   }, []);
 
-  const safeGuard = () => {
-    const allGood =
-      setLogClient3 !== undefined &&
-      setLogServer5 !== undefined &&
-      setLogServer8 !== undefined &&
-      setLogClient9 !== undefined &&
-      setLogClient10 !== undefined &&
-      setLogClient11 !== undefined &&
-      setLogClient12 !== undefined &&
-      setLogClient13 !== undefined &&
-      isClientRunningRef?.current !== undefined &&
-      rttsRef?.current !== undefined &&
-      runningClient3 !== undefined &&
-      runningServer5 !== undefined &&
-      runningServer8 !== undefined &&
-      runningClient9 !== undefined &&
-      runningClient10 !== undefined &&
-      runningClient11 !== undefined &&
-      runningClient12 !== undefined &&
-      runningClient13 !== undefined &&
-      stopServersSnackBar !== undefined &&
-      stopClientsSnackBar !== undefined &&
-      openWSStopSnackbar !== undefined &&
-      openWSConnectSnackbar !== undefined;
-
-    if (!allGood) return null;
-    return true;
-  };
-
-  if (!safeGuard()) return null;
-
   const handleStopServers = () => {
     if (wsRef.current) {
       wsRef.current.send("stopAllServers");

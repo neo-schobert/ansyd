@@ -91,15 +91,6 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       setClientLogs[isClientRunningRef?.current]((prev) =>
         prev ? prev + "\n" + msg : msg
       );
-    } else {
-      console.log("isClientRunningRef:", isClientRunningRef);
-      console.log("setClientLogs:", setClientLogs);
-      if (!isClientRunningRef) {
-        console.log("isClientRunningRef is undefined");
-      }
-      if (!setClientLogs) {
-        console.log("setClientLogs is undefined");
-      }
     }
   };
 
@@ -183,6 +174,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       last.receivedTimestamp === 0
     ) {
       last.receivedTimestamp = now;
+      setShouldSend(false);
 
       let somme = 0;
       for (const rtt of arr) {
@@ -215,7 +207,6 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
             sendTimestamp: Date.now(),
             receivedTimestamp: 0,
           });
-          setShouldSend(false);
 
           setTimeout(() => {
             setShouldSend(true);
@@ -441,6 +432,8 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     t--;
     return (-c / 2) * (t * (t - 2) - 1) + b;
   };
+
+  if (isClient !== undefined && !isClient && !setClientLogs) return null;
 
   return (
     <div

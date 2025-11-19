@@ -20,6 +20,9 @@ const Lab3Page = () => {
   const [logClient13, setLogClient13] = useState("");
   const isClientRunningRef = useRef(-1);
   const mustSendFirstMessageRef = useRef(true);
+  const rttsRef = useRef<
+    { sendTimestamp: number; receivedTimestamp: number }[]
+  >([]);
 
   const [runningClient3, setRunningClient3] = useState(false);
   const [runningServer5, setRunningServer5] = useState(false);
@@ -71,6 +74,7 @@ const Lab3Page = () => {
       wsRef.current.send("stopAllServers");
       wsRef.current.onmessage = () => {};
     }
+    rttsRef.current = [];
     const runningServers = [runningServer5, runningServer8];
     const snackbarString = `Le${
       runningServers.filter((r) => r).length > 1 ? "s" : ""
@@ -101,6 +105,8 @@ const Lab3Page = () => {
       runningClient12,
       runningClient13,
     ];
+    rttsRef.current = [];
+
     const snackbarString = `Le${
       runningClients.filter((r) => r).length > 1 ? "s" : ""
     } client${runningClients.filter((r) => r).length > 1 ? "s" : ""} de${
@@ -191,6 +197,7 @@ n, err := reader.Read(p)
           setRunning={setRunningClient3}
           runningServers={[runningServer5, runningServer8]}
           handleStopServers={handleStopClients}
+          rttsRef={rttsRef}
         >
           {`package main
 
@@ -263,6 +270,7 @@ func main() {
           running={runningServer5}
           setRunning={setRunningServer5}
           handleStopServers={handleStopServers}
+          rttsRef={rttsRef}
         >
           {`package main
 
@@ -406,6 +414,7 @@ func main() {
           running={runningServer8}
           setRunning={setRunningServer8}
           handleStopServers={handleStopServers}
+          rttsRef={rttsRef}
         >
           {`package main
 
@@ -478,68 +487,46 @@ func main() {
           setRunning={setRunningClient9}
           runningServers={[runningServer5, runningServer8]}
           handleStopServers={handleStopClients}
+          rttsRef={rttsRef}
         >
           {`package main
 
 import (
+	"bufio"
 	"fmt"
-	"math/rand"
 	"net"
 	"time"
 )
 
-func sendResponse(conn *net.UDPConn, addr *net.UDPAddr, start time.Time) {
-	// Délai aléatoire entre 0 et 7000 ms pour tester les erreurs
-	delay := rand.Intn(7000)
-	fmt.Printf("Waiting %d ms before responding to %v\\n", delay, addr)
-
-	time.Sleep(time.Duration(delay) * time.Millisecond)
-
-	_, err := conn.WriteToUDP([]byte("Hello UDP Client"), addr)
-	if err != nil {
-		fmt.Printf("Couldn't send response %v\\n", err)
-		return
-	}
-
-	// Mesure du temps écoulé
-	elapsed := time.Since(start)
-
-	if elapsed > 5*time.Second {
-		fmt.Printf("ERROR: Response to %v took too long: %v\\n", addr, elapsed)
-	} else {
-		fmt.Printf("Response to %v took %v\\n", addr, elapsed)
-	}
-}
-
 func main() {
+  p := make([]byte, 2048)
+  conn, err := net.Dial("udp", "127.0.0.1:1234")
+  if err != nil {
+  	fmt.Printf("Some error %v ", err)
+  	return
+  }
+  for {
+    start := time.Now()
 
-	p := make([]byte, 2048)
-	addr := net.UDPAddr{
-		Port: 1234,
-		IP:   net.ParseIP("127.0.0.1"),
+    fmt.Fprintf(conn, "Hi UDP Server, How are you doing?")
+    _, err = bufio.NewReader(conn).Read(p) 
+
+    // Mesure du temps écoulé
+    elapsed := time.Since(start)  
+    if elapsed > 5*time.Second {
+      fmt.Printf("ERROR: Response took too long: %v\\n", elapsed)
+    } else {
+      fmt.Printf("Response took %v\\n", elapsed)
+    }
+
+    if err == nil {
+      fmt.Printf("%s\\n", p)
+    } else {
+      fmt.Printf("Some error %v\\n", err)
+    }
+	  time.Sleep(1 * time.Second)
 	}
-
-	ser, err := net.ListenUDP("udp", &addr)
-	if err != nil {
-		fmt.Printf("Some error %v\\n", err)
-		return
-	}
-
-	for {
-		n, remoteaddr, err := ser.ReadFromUDP(p)
-		if err != nil {
-			fmt.Printf("Read error %v\\n", err)
-			continue
-		}
-
-		fmt.Printf("Received from %v: %s\\n", remoteaddr, string(p[:n]))
-
-		// Enregistre le moment où la requête arrive
-		start := time.Now()
-
-		// Lance la réponse asynchrone avec la mesure du temps
-		go sendResponse(ser, remoteaddr, start)
-	}
+	conn.Close()
 }`}
         </CodeBlock>
 
@@ -566,90 +553,72 @@ func main() {
           setRunning={setRunningClient10}
           runningServers={[runningServer5, runningServer8]}
           handleStopServers={handleStopClients}
+          rttsRef={rttsRef}
         >
           {`package main
 
 import (
-	"fmt"
-	"math"
-	"math/rand"
-	"net"
-	"time"
+  "bufio"
+  "math"
+  "fmt"
+  "net"
+  "time"
 )
 
 var rtts []time.Duration // Slice globale pour stocker tous les RTTs
 
-func sendResponse(conn *net.UDPConn, addr *net.UDPAddr, start time.Time) {
-	// Délai aléatoire entre 0 et 7000 ms pour tester les erreurs
-	delay := rand.Intn(7000)
-	fmt.Printf("Waiting %d ms before responding to %v\\n", delay, addr)
-
-	time.Sleep(time.Duration(delay) * time.Millisecond)
-
-	_, err := conn.WriteToUDP([]byte("Hello UDP Client"), addr)
-	if err != nil {
-		fmt.Printf("Couldn't send response %v\\n", err)
-		return
-	}
-
-	// Mesure du temps écoulé (RTT)
-	elapsed := time.Since(start).Seconds() // en secondes
-
-	// Stocker dans la slice
-	rtts = append(rtts, elapsed)
-
-	if elapsed > 5*time.Second {
-		fmt.Printf("ERROR: Response to %v took too long: %v\\n", addr, elapsed)
-	} else {
-		fmt.Printf("Response to %v took %v\\n", addr, elapsed)
-	}
-
-	// Calculer la moyenne et l'écart-type après chaque nouveau RTT
-	var sum float64
-	for _, rtt := range rtts {
-		sum += float64(rtt) / 1e9
-	}
-  avg := sum / float64(len(rtts))
-
-  variance := 0.0
-  for _, rtt := range rtts {
-    variance += math.Pow(float64(rtt)/1e9 - avg, 2)
-  }
-  stdev := math.Sqrt(variance / float64(len(rtts)))
-
-
-	fmt.Printf("Current RTT stats -> Average: %.3f s | StdDev: %.3f s\\n\\n", avg, stdev)
-}
 
 func main() {
+  p := make([]byte, 2048)
+  conn, err := net.Dial("udp", "127.0.0.1:1234")
+  if err != nil {
+  	fmt.Printf("Some error %v ", err)
+  	return
+  }
+  for {
+    start := time.Now()
 
-	p := make([]byte, 2048)
-	addr := net.UDPAddr{
-		Port: 1234,
-		IP:   net.ParseIP("127.0.0.1"),
+    fmt.Fprintf(conn, "Hi UDP Server, How are you doing?")
+    _, err = bufio.NewReader(conn).Read(p) 
+
+    // Mesure du temps écoulé
+    elapsed := time.Since(start).Seconds() // en secondes
+    
+    // Stocker dans la slice
+    rtts = append(rtts, elapsed)
+
+    if elapsed > 5*time.Second {
+      fmt.Printf("ERROR: Response took too long: %v\\n", elapsed)
+    } else {
+      fmt.Printf("Response took %v\\n", elapsed)
+    }
+
+    
+	  // Calculer la moyenne et l'écart-type après chaque nouveau RTT
+    var sum float64
+    for _, rtt := range rtts {
+      sum += float64(rtt) / 1e9
+    }
+    avg := sum / float64(len(rtts))
+
+    variance := 0.0
+    for _, rtt := range rtts {
+      variance += math.Pow(float64(rtt)/1e9 - avg, 2)
+    }
+    stdev := math.Sqrt(variance / float64(len(rtts)))
+
+
+    fmt.Printf("Current RTT stats -> Average: %.3f s | StdDev: %.3f s\\n\\n", avg, stdev)
+
+
+    if err == nil {
+      fmt.Printf("%s\\n", p)
+    } else {
+      fmt.Printf("Some error %v\\n", err)
+    }
+	  time.Sleep(1 * time.Second)
 	}
-
-	ser, err := net.ListenUDP("udp", &addr)
-	if err != nil {
-		fmt.Printf("Some error %v\\n", err)
-		return
-	}
-
-	for {
-		n, remoteaddr, err := ser.ReadFromUDP(p)
-		if err != nil {
-			fmt.Printf("Read error %v\\n", err)
-			continue
-		}
-
-		fmt.Printf("Received from %v: %s\\n", remoteaddr, string(p[:n]))
-
-		// Enregistre le moment où la requête arrive
-		start := time.Now()
-
-		// Lance la réponse asynchrone avec la mesure du temps
-		go sendResponse(ser, remoteaddr, start)
-	}
+	conn.Close()
 }`}
         </CodeBlock>
 
@@ -673,6 +642,7 @@ func main() {
           setRunning={setRunningClient11}
           runningServers={[runningServer5, runningServer8]}
           handleStopServers={handleStopClients}
+          rttsRef={rttsRef}
         >
           {`package main
 

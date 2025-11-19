@@ -21,7 +21,12 @@ interface CodeBlockProps {
   handleStopServers?: () => void;
   runningServers?: boolean[];
   rttsRef?: React.RefObject<
-    { sendTimestamp: number; receivedTimestamp: number }[]
+    {
+      sendTimestamp: number;
+      receivedTimestamp: number;
+      isLost: boolean;
+      isSent: boolean;
+    }[]
   >;
 }
 
@@ -52,12 +57,12 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   if (setLog) {
     [localLog, setLocalLog] = [log!, setLog];
   }
-  const stopRef = useRef(false);
   const [showSnackbarOpenClient, setShowSnackbarOpenClient] = useState(false);
   const [showSnackbarOpenServer, setShowSnackbarOpenServer] = useState(false);
   const [loading, setLoading] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const TIMEOUT_TIME = 4000; // en ms
+  const timeoutIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -79,6 +84,16 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       container.scrollTop = container.scrollHeight;
     }
   }, [localLog]);
+
+  const runningRef = useRef(false);
+  useEffect(() => {
+    runningRef.current = running;
+
+    if (!running && timeoutIntervalRef.current) {
+      clearInterval(timeoutIntervalRef.current);
+      timeoutIntervalRef.current = null;
+    }
+  }, [running]);
 
   const appendLog = (msg: string) =>
     setLocalLog((prev) => (prev ? prev + "\n" + msg : msg));
@@ -124,6 +139,11 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     const elapsedMs = now - last.sendTimestamp;
 
     const elapsedSec = elapsedMs / 1000;
+
+    const countLost = arr.reduce((acc, rtt) => acc + (rtt.isLost ? 1 : 0), 0);
+
+    const countSent = arr.reduce((acc, rtt) => acc + (rtt.isSent ? 1 : 0), 0);
+
     switch (isClientRunningRef?.current) {
       case 0:
         return true;
@@ -151,7 +171,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
 
         return true;
       case 3:
-        if (elapsedMs >= 1000) {
+        if (elapsedMs >= TIMEOUT_TIME) {
           return false;
         } else {
           appendClientLog(`Response took ${elapsedSec}s`);
@@ -159,6 +179,27 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
             `Current RTT stats -> Average: ${average / 1000} s | StdDev: ${
               stdev / 1000
             } s`
+          );
+          return true;
+        }
+      case 4:
+        if (elapsedMs >= TIMEOUT_TIME) {
+          return false;
+        } else {
+          console.log("hey");
+          appendClientLog(`Response took ${elapsedSec}s`);
+          appendClientLog(
+            `Current RTT stats -> Average: ${average / 1000} s | StdDev: ${
+              stdev / 1000
+            } s${
+              countLost !== undefined &&
+              countSent !== undefined &&
+              countSent !== 0
+                ? " | Loss: " + (countLost / countSent) * 100
+                : countSent === 0
+                ? " | Loss: +inf"
+                : ""
+            }`
           );
           return true;
         }
@@ -181,6 +222,8 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         rttsRef?.current?.push({
           sendTimestamp: now,
           receivedTimestamp: 0,
+          isLost: false,
+          isSent: false,
         });
         ws.send("Hi UDP Server, How are you doing?|" + now);
       }
@@ -201,9 +244,11 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       setShowSnackbarOpenServer(true);
     }
 
+    const lastClient = isClientRunningRef.current;
+    isClientRunningRef.current = endpoint;
+
     setRunning(true);
     setLocalLog("");
-    stopRef.current = false;
 
     const sendMsg = () => {
       if (!wsRef || !wsRef.current) return appendLog("❌ wsRef non défini");
@@ -215,15 +260,19 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         rttsRef?.current?.push({
           sendTimestamp: now,
           receivedTimestamp: 0,
+          isLost: false,
+          isSent: false,
         });
         ws.send("Hi UDP Server, How are you doing?|" + now);
 
-        if (endpoint !== 3) return;
+        if (endpoint < 3) return;
         const step = 10; // ms
 
         const interval = setInterval(() => {
-          if (stopRef.current) {
+          if (!runningRef.current) {
+            // runningRef = ref miroir de ton state
             clearInterval(interval);
+            timeoutIntervalRef.current = null;
             return;
           }
           const arr = rttsRef?.current;
@@ -236,15 +285,34 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
               const elapsedMs = now - rtt.sendTimestamp;
               if (elapsedMs >= TIMEOUT_TIME) {
                 rtt.receivedTimestamp = now;
+                rtt.isLost = true;
                 appendLog(
                   "Packet lost or error: (took " + elapsedMs / 1000 + "s)"
+                );
+
+                const countLost = arr.reduce(
+                  (acc, rtt) => acc + (rtt.isLost ? 1 : 0),
+                  0
+                );
+
+                const countSent = arr.reduce(
+                  (acc, rtt) => acc + (rtt.isSent ? 1 : 0),
+                  0
                 );
 
                 const { average, stdev } = calculateStats();
                 appendLog(
                   `Current RTT stats -> Average: ${
                     average / 1000
-                  } s | StdDev: ${stdev / 1000} s`
+                  } s | StdDev: ${stdev / 1000} s${
+                    countLost !== undefined &&
+                    countSent !== undefined &&
+                    countSent !== 0
+                      ? " | Loss: " + (countLost / countSent) * 100
+                      : countSent === 0
+                      ? " | Loss: +inf"
+                      : ""
+                  }`
                 );
 
                 setTimeout(() => {
@@ -259,6 +327,8 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
                       rttsRef?.current?.push({
                         sendTimestamp: now,
                         receivedTimestamp: 0,
+                        isLost: false,
+                        isSent: false,
                       });
                       ws.send("Hi UDP Server, How are you doing?|" + now);
                     }
@@ -267,10 +337,12 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
               }
             });
         }, step);
+
+        timeoutIntervalRef.current = interval;
       }
     };
 
-    if (isClientRunningRef.current < 0) {
+    if (lastClient < 0) {
       sendMsg();
     } else {
       setLoading(7500);
@@ -289,8 +361,6 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         }
       }, step);
     }
-
-    isClientRunningRef.current = endpoint;
   };
 
   const stopWebSocket = () => {
@@ -300,8 +370,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       isClientRunningRef.current = -1;
     }
 
-    stopRef.current = true;
-    if (endpoint === 3) {
+    if (typeof endpoint === "number" && endpoint >= 3) {
       setLoading(7500);
 
       const step = 100; // ms
@@ -354,11 +423,14 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
             appendLog("Server Send: Hello UDP Client");
             const now = Date.now();
 
-            if (isClientRunningRef?.current === 3) {
+            if (
+              isClientRunningRef?.current &&
+              isClientRunningRef?.current >= 3
+            ) {
               const delay = event.data.split("|")[2];
               const start = event.data.split("|")[1];
 
-              if (isClientRunningRef?.current === 3 && delay <= TIMEOUT_TIME) {
+              if (isClientRunningRef?.current >= 3 && delay <= TIMEOUT_TIME) {
                 const arr = rttsRef?.current;
                 if (!arr || arr.length === 0) return;
 
@@ -367,6 +439,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
                 );
                 if (dedicatedMsg) {
                   dedicatedMsg.receivedTimestamp = now;
+                  dedicatedMsg.isSent = true;
                 }
 
                 setTimeout(() => {
@@ -379,9 +452,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
 
               const last = arr[arr.length - 1];
               last.receivedTimestamp = now;
-              if (last) {
-                last.receivedTimestamp = now;
-              }
+              last.isSent = true;
               setTimeout(() => {
                 sendMsgClient(now);
               }, 1000);

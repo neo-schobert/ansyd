@@ -23,7 +23,12 @@ const Lab3Page = () => {
   const [logClient13, setLogClient13] = useState("");
   const isClientRunningRef = useRef(-1);
   const rttsRef = useRef<
-    { sendTimestamp: number; receivedTimestamp: number; isLocal: boolean }[]
+    {
+      sendTimestamp: number;
+      receivedTimestamp: number;
+      isLost: boolean;
+      isSent: boolean;
+    }[]
   >([]);
 
   const [runningClient3, setRunningClient3] = useState(false);
@@ -81,7 +86,6 @@ const Lab3Page = () => {
       wsRef.current.send("stopAllServers");
       wsRef.current.onmessage = () => {};
     }
-    rttsRef.current = [];
     const runningServers = [runningServer5, runningServer8];
     const snackbarString = `Le${
       runningServers.filter((r) => r).length > 1 ? "s" : ""
@@ -236,7 +240,9 @@ func main() {
 }`}
         </CodeBlock>
 
-        <FloatingClientLog log={logClient3} targetId="client" />
+        {runningClient3 && (
+          <FloatingClientLog log={logClient3} targetId="client3" />
+        )}
 
         <h2 className="text-2xl font-semibold text-gray-800">
           2 — UDP Server{" "}
@@ -467,8 +473,6 @@ func main() {
 }`}
         </CodeBlock>
 
-        <FloatingClientLog log={logClient9} targetId="client" />
-
         <h2 className="text-xl font-semibold text-gray-800">
           Question 9 — Measure Connectivity RTT
         </h2>
@@ -536,7 +540,9 @@ func main() {
 }`}
         </CodeBlock>
 
-        <FloatingClientLog log={logClient9} targetId="client" />
+        {runningClient9 && (
+          <FloatingClientLog log={logClient9} targetId="client9" />
+        )}
 
         <h2 className="text-xl font-semibold text-gray-800">
           Question 10 — Store RTT Measurements
@@ -614,7 +620,7 @@ func main() {
     stdev := math.Sqrt(variance / float64(len(rtts)))
 
 
-    fmt.Printf("Current RTT stats -> Average: %.3f s | StdDev: %.3f s\\n\\n", avg, stdev)
+    fmt.Printf("Current RTT stats -> Average: %v  s | StdDev: %v  s\\n\\n", avg, stdev)
 
 
     if err == nil {
@@ -628,7 +634,9 @@ func main() {
 }`}
         </CodeBlock>
 
-        <FloatingClientLog log={logClient10} targetId="client" />
+        {runningClient10 && (
+          <FloatingClientLog log={logClient10} targetId="client10" />
+        )}
 
         <h2 className="text-xl font-semibold text-gray-800">
           Question 11 — Timeout Condition
@@ -659,68 +667,238 @@ func main() {
           {`package main
 
 import (
-	"bufio"
-	"fmt"
-	"math"
-	"net"
-	"time"
+  "bufio"
+  "fmt"
+  "math"
+  "net"
+  "time"
 )
 
 var rtts []time.Duration // Slice globale pour stocker tous les RTTs
 
 func main() {
-	p := make([]byte, 2048)
-	conn, err := net.Dial("udp", "127.0.0.1:1234")
-	if err != nil {
-		fmt.Printf("Some error %v\\n", err)
-		return
-	}
-	defer conn.Close()
-
-	for {
-		start := time.Now()
-
-		// Envoyer le message
-		fmt.Fprintf(conn, "Hi UDP Server, How are you doing?")
-
-		// Définir un timeout pour la lecture
-		conn.SetReadDeadline(time.Now().Add(4 * time.Second))
-
-		_, err = bufio.NewReader(conn).Read(p)
-
-		// Mesure du temps écoulé
-		elapsed := time.Since(start)
-		rtts = append(rtts, elapsed)
-
-		if err != nil {
-			// Timeout
-			fmt.Printf("Packet lost or error: %v (took %.3fs)\\n", err, elapsed.Seconds())
-		} else {
-			fmt.Printf("Response took %.3fs\\n", elapsed.Seconds())
-		}
-
-		// Calcul de la moyenne et de l'écart-type
-		var sum float64
-		for _, rtt := range rtts {
-			sum += rtt.Seconds()
-		}
-		avg := sum / float64(len(rtts))
-
-		var variance float64
-		for _, rtt := range rtts {
-			variance += math.Pow(rtt.Seconds()-avg, 2)
-		}
-		stdev := math.Sqrt(variance / float64(len(rtts)))
-
-		fmt.Printf("Current RTT stats -> Average: %.3f s | StdDev: %.3f s\\n\\n", avg, stdev)
-
-		time.Sleep(1 * time.Second)
-	}
+  p := make([]byte, 2048)
+  conn, err := net.Dial("udp", "127.0.0.1:1234")
+  if err != nil {
+  	fmt.Printf("Some error %v\\n", err)
+  	return
+  }
+  defer conn.Close()  
+  for {
+  	start := time.Now() 
+  	// Envoyer le message
+  	fmt.Fprintf(conn, "Hi UDP Server, How are you doing?")  
+  	// Définir un timeout pour la lecture
+  	conn.SetReadDeadline(time.Now().Add(4 * time.Second)) 
+  	_, err = bufio.NewReader(conn).Read(p)  
+  	// Mesure du temps écoulé
+  	elapsed := time.Since(start)
+  	rtts = append(rtts, elapsed)  
+  	if err != nil {
+  		// Timeout
+  		fmt.Printf("Packet lost or error: %v (took %v s)\\n", err, elapsed.Seconds())
+  	} else {
+  		fmt.Printf("Response took %v s\\n", elapsed.Seconds())
+  	} 
+  	// Calcul de la moyenne et de l'écart-type
+  	var sum float64
+  	for _, rtt := range rtts {
+  		sum += rtt.Seconds()
+  	}
+  	avg := sum / float64(len(rtts)) 
+  	var variance float64
+  	for _, rtt := range rtts {
+  		variance += math.Pow(rtt.Seconds()-avg, 2)
+  	}
+  	stdev := math.Sqrt(variance / float64(len(rtts))) 
+  	fmt.Printf("Current RTT stats -> Average: %v  s | StdDev: %v  s\\n\\n", avg, stdev) 
+  	time.Sleep(1 * time.Second)
+  }
 }
 `}
         </CodeBlock>
 
-        <FloatingClientLog log={logClient11} targetId="client" />
+        {runningClient11 && (
+          <FloatingClientLog log={logClient11} targetId="client11" />
+        )}
+
+        <h2 className="text-xl font-semibold text-gray-800">
+          Question 12 — Count Sent and Lost Packets
+        </h2>
+
+        <TextBlock>
+          On peut compter les paquets envoyés et perdus en utilisant deux
+          variables entières. À chaque envoi de message, on incrémente le
+          compteur de paquets envoyés. Si une erreur de timeout se produit lors
+          de la lecture, on incrémente le compteur de paquets perdus. On affiche
+          ensuite ces compteurs avec les statistiques RTT.
+        </TextBlock>
+
+        <CodeBlock
+          id="client12"
+          endpoint={4}
+          wsRef={wsRef}
+          isClient
+          log={logClient12}
+          setLog={setLogClient12}
+          isClientRunningRef={isClientRunningRef}
+          running={runningClient12}
+          setRunning={setRunningClient12}
+          runningServers={[runningServer5, runningServer8]}
+          handleStopServers={handleStopClients}
+          rttsRef={rttsRef}
+        >
+          {`package main
+
+import (
+  "bufio"
+  "fmt"
+  "math"
+  "net"
+  "time"
+)
+
+var rtts []time.Duration // Slice globale pour stocker tous les RTTs
+
+func main() {
+  p := make([]byte, 2048)
+  conn, err := net.Dial("udp", "127.0.0.1:1234")
+  if err != nil {
+  	fmt.Printf("Some error %v\\n", err)
+  	return
+  }
+  defer conn.Close()  
+  sentCount := 0
+  lostCount := 0  
+  for {
+  	start := time.Now() 
+  	// Envoyer le message
+  	fmt.Fprintf(conn, "Hi UDP Server, How are you doing?")  
+  	// Définir un timeout pour la lecture
+  	conn.SetReadDeadline(time.Now().Add(4 * time.Second)) 
+  	_, err = bufio.NewReader(conn).Read(p)  
+  	// Mesure du temps écoulé
+  	elapsed := time.Since(start)
+  	rtts = append(rtts, elapsed)  
+  	if err != nil {
+  		// Timeout
+      lostCount++
+  		fmt.Printf("Packet lost or error: %v (took %v s)\\n", err, elapsed.Seconds())
+  	} else {
+      sentCount++
+  		fmt.Printf("Response took %v s\\n", elapsed.Seconds())
+  	} 
+  	// Calcul de la moyenne et de l'écart-type
+  	var sum float64
+  	for _, rtt := range rtts {
+  		sum += rtt.Seconds()
+  	}
+  	avg := sum / float64(len(rtts)) 
+  	var variance float64
+  	for _, rtt := range rtts {
+  		variance += math.Pow(rtt.Seconds()-avg, 2)
+  	}
+  	stdev := math.Sqrt(variance / float64(len(rtts))) 
+    lossPercent := float64(lostCount) / float64(sentCount) * 100  
+    fmt.Printf("Current RTT stats -> Average: %v s | StdDev: %v s | Loss: %v\\n\\n",avg, stdev, lossPercent)  
+  	time.Sleep(1 * time.Second)
+  }
+}
+`}
+        </CodeBlock>
+
+        {runningClient12 && (
+          <FloatingClientLog log={logClient12} targetId="client12" />
+        )}
+
+        <h2 className="text-xl font-semibold text-gray-800">
+          Question 13 — Periodic Statistics Output
+        </h2>
+
+        <TextBlock>
+          On peut compter les paquets envoyés et perdus en utilisant deux
+          variables entières. À chaque envoi de message, on incrémente le
+          compteur de paquets envoyés. Si une erreur de timeout se produit lors
+          de la lecture, on incrémente le compteur de paquets perdus. On affiche
+          ensuite ces compteurs avec les statistiques RTT.
+        </TextBlock>
+
+        <CodeBlock
+          id="client13"
+          endpoint={4}
+          wsRef={wsRef}
+          isClient
+          log={logClient13}
+          setLog={setLogClient13}
+          isClientRunningRef={isClientRunningRef}
+          running={runningClient13}
+          setRunning={setRunningClient13}
+          runningServers={[runningServer5, runningServer8]}
+          handleStopServers={handleStopClients}
+          rttsRef={rttsRef}
+        >
+          {`package main
+
+import (
+  "bufio"
+  "fmt"
+  "math"
+  "net"
+  "time"
+)
+
+var rtts []time.Duration // Slice globale pour stocker tous les RTTs
+
+func main() {
+  p := make([]byte, 2048)
+  conn, err := net.Dial("udp", "127.0.0.1:1234")
+  if err != nil {
+  	fmt.Printf("Some error %v\\n", err)
+  	return
+  }
+  defer conn.Close()  
+  sentCount := 0
+  lostCount := 0  
+  for {
+  	start := time.Now() 
+  	// Envoyer le message
+  	fmt.Fprintf(conn, "Hi UDP Server, How are you doing?")  
+  	// Définir un timeout pour la lecture
+  	conn.SetReadDeadline(time.Now().Add(4 * time.Second)) 
+  	_, err = bufio.NewReader(conn).Read(p)  
+  	// Mesure du temps écoulé
+  	elapsed := time.Since(start)
+  	rtts = append(rtts, elapsed)  
+  	if err != nil {
+  		// Timeout
+      lostCount++
+  		fmt.Printf("Packet lost or error: %v (took %v s)\\n", err, elapsed.Seconds())
+  	} else {
+      sentCount++
+  		fmt.Printf("Response took %v s\\n", elapsed.Seconds())
+  	} 
+  	// Calcul de la moyenne et de l'écart-type
+  	var sum float64
+  	for _, rtt := range rtts {
+  		sum += rtt.Seconds()
+  	}
+  	avg := sum / float64(len(rtts)) 
+  	var variance float64
+  	for _, rtt := range rtts {
+  		variance += math.Pow(rtt.Seconds()-avg, 2)
+  	}
+  	stdev := math.Sqrt(variance / float64(len(rtts))) 
+    lossPercent := float64(lostCount) / float64(sentCount) * 100  
+    fmt.Printf("Current RTT stats -> Average: %v s | StdDev: %v s | Loss: %v\\n\\n",avg, stdev, lossPercent)  
+  	time.Sleep(1 * time.Second)
+  }
+}
+`}
+        </CodeBlock>
+
+        {runningClient13 && (
+          <FloatingClientLog log={logClient13} targetId="client13" />
+        )}
       </div>
       <Snackbar
         variant="soft"

@@ -20,7 +20,7 @@ export const FloatingClientLog: React.FC<FloatingClientLogProps> = ({
     const observer = new IntersectionObserver(
       ([entry]) => {
         // Affiche le log flottant uniquement si on a scrolé en dessous du CodeBlock
-        setIsVisible(entry.boundingClientRect.bottom < 0);
+        setIsVisible(!entry.isIntersecting);
       },
       { root: null, threshold: 0 }
     );
@@ -62,13 +62,13 @@ export const FloatingClientLog: React.FC<FloatingClientLogProps> = ({
           display: "inline-block",
         }}
       >
-        Client Log
+        Client Log Q{targetId.replace("client", "")}
       </div>
 
       {/* Conteneur de logs */}
       <div
         ref={logContainerRef}
-        className="bg-gray-900 text-green-400 font-mono text-[9px] md:text-sm p-2 rounded-lg whitespace-pre-wrap overflow-y-auto"
+        className="bg-gray-900 text-green-400 font-mono text-[9px] md:text-sm p-2 text-start rounded-lg whitespace-pre-wrap overflow-y-auto"
         style={{
           maxHeight: "10em",
           width: "90%",

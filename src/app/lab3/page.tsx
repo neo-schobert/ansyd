@@ -2,6 +2,7 @@
 "use client";
 
 import { CodeBlock } from "@/components/CodeBlock";
+import { FloatingClientLog } from "@/components/FloatingClientLog";
 import { TextBlock } from "@/components/TextBlock";
 import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 import { Button, Snackbar } from "@mui/joy";
@@ -164,7 +165,15 @@ n, err := reader.Read(p)
           isClientRunningRef={isClientRunningRef}
           running={running}
           setRunning={setRunning}
-          runningServers={[running1, running2]}
+          runningServers={[
+            running1,
+            running2,
+            running3,
+            running4,
+            running5,
+            running6,
+            running7,
+          ]}
         >
           {`package main
 
@@ -195,6 +204,8 @@ func main() {
 	conn.Close()
 }`}
         </CodeBlock>
+
+        <FloatingClientLog log={log} targetId="client" />
 
         <h2 className="text-2xl font-semibold text-gray-800">
           2 — UDP Server{" "}
@@ -464,6 +475,113 @@ func sendResponse(conn *net.UDPConn, addr *net.UDPAddr, start time.Time) {
 	} else {
 		fmt.Printf("Response to %v took %v\\n", addr, elapsed)
 	}
+}
+
+func main() {
+
+	p := make([]byte, 2048)
+	addr := net.UDPAddr{
+		Port: 1234,
+		IP:   net.ParseIP("127.0.0.1"),
+	}
+
+	ser, err := net.ListenUDP("udp", &addr)
+	if err != nil {
+		fmt.Printf("Some error %v\\n", err)
+		return
+	}
+
+	for {
+		n, remoteaddr, err := ser.ReadFromUDP(p)
+		if err != nil {
+			fmt.Printf("Read error %v\\n", err)
+			continue
+		}
+
+		fmt.Printf("Received from %v: %s\\n", remoteaddr, string(p[:n]))
+
+		// Enregistre le moment où la requête arrive
+		start := time.Now()
+
+		// Lance la réponse asynchrone avec la mesure du temps
+		go sendResponse(ser, remoteaddr, start)
+	}
+}`}
+        </CodeBlock>
+
+        <h2 className="text-xl font-semibold text-gray-800">
+          Question 10 — Store RTT Measurements
+        </h2>
+
+        <TextBlock>
+          On ajoute ici une slice globale pour stocker tous les RTTs et on
+          calcule la moyenne et l&apos;écart-type après chaque nouveau RTT.
+        </TextBlock>
+
+        <CodeBlock
+          endpoint="serverq10"
+          wsRef={wsRef}
+          isClient={false}
+          log={log4}
+          setLog={setLog4}
+          setClientLog={setLog}
+          isClientRunningRef={isClientRunningRef}
+          running={running4}
+          setRunning={setRunning4}
+          handleStopServers={handleStopServers}
+        >
+          {`package main
+
+import (
+	"fmt"
+	"math"
+	"math/rand"
+	"net"
+	"time"
+)
+
+var rtts []time.Duration // Slice globale pour stocker tous les RTTs
+
+func sendResponse(conn *net.UDPConn, addr *net.UDPAddr, start time.Time) {
+	// Délai aléatoire entre 0 et 7000 ms pour tester les erreurs
+	delay := rand.Intn(7000)
+	fmt.Printf("Waiting %d ms before responding to %v\\n", delay, addr)
+
+	time.Sleep(time.Duration(delay) * time.Millisecond)
+
+	_, err := conn.WriteToUDP([]byte("Hello UDP Client"), addr)
+	if err != nil {
+		fmt.Printf("Couldn't send response %v\\n", err)
+		return
+	}
+
+	// Mesure du temps écoulé (RTT)
+	elapsed := time.Since(start).Seconds() // en secondes
+
+	// Stocker dans la slice
+	rtts = append(rtts, elapsed)
+
+	if elapsed > 5*time.Second {
+		fmt.Printf("ERROR: Response to %v took too long: %v\\n", addr, elapsed)
+	} else {
+		fmt.Printf("Response to %v took %v\\n", addr, elapsed)
+	}
+
+	// Calculer la moyenne et l'écart-type après chaque nouveau RTT
+	var sum float64
+	for _, rtt := range rtts {
+		sum += float64(rtt) / 1e9
+	}
+  avg := sum / float64(len(rtts))
+
+  variance := 0.0
+  for _, rtt := range rtts {
+    variance += math.Pow(float64(rtt)/1e9 - avg, 2)
+  }
+  stdev := math.Sqrt(variance / float64(len(rtts)))
+
+
+	fmt.Printf("Current RTT stats -> Average: %.3f s | StdDev: %.3f s\\n\\n", avg, stdev)
 }
 
 func main() {

@@ -145,7 +145,8 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
           } else {
             appendLog(event.data);
             setTimeout(() => {
-              if (event.data === "Hello UDP Client") sendMsgClient();
+              if (event.data === "Server Send: Hello UDP Client")
+                sendMsgClient();
             }, 1000);
           }
         };

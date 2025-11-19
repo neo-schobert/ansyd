@@ -3,8 +3,20 @@
 import { CodeBlock } from "@/components/CodeBlock";
 import { SchemaBlock } from "@/components/SchemaBlock";
 import { TextBlock } from "@/components/TextBlock";
+import { useState } from "react";
 
 const Lab2Page = () => {
+  const [log1, setLog1] = useState("");
+  const [log2, setLog2] = useState("");
+  const [log3, setLog3] = useState("");
+  const [log4, setLog4] = useState("");
+  const [log5, setLog5] = useState("");
+  const [running1, setRunning1] = useState(false);
+  const [running2, setRunning2] = useState(false);
+  const [running3, setRunning3] = useState(false);
+  const [running4, setRunning4] = useState(false);
+  const [running5, setRunning5] = useState(false);
+
   return (
     <div className="min-h-screen bg-linear-to-b from-gray-50 via-gray-100 to-gray-50 p-6 pt-40">
       <h1 className="text-4xl font-bold text-gray-900 mb-12 text-center">
@@ -56,7 +68,13 @@ const Lab2Page = () => {
           </ul>
         </TextBlock>
 
-        <CodeBlock endpoint="https://go-backend-531057961347.europe-west1.run.app/lab2?fn=q1">
+        <CodeBlock
+          endpoint="https://go-backend-531057961347.europe-west1.run.app/lab2?fn=q1"
+          log={log1}
+          setLog={setLog1}
+          running={running1}
+          setRunning={setRunning1}
+        >
           {`package main
 
 import (
@@ -99,7 +117,13 @@ func main() {
           structures plus complexes.
         </TextBlock>
 
-        <CodeBlock endpoint="https://go-backend-531057961347.europe-west1.run.app/lab2?fn=q2">
+        <CodeBlock
+          endpoint="https://go-backend-531057961347.europe-west1.run.app/lab2?fn=q2"
+          log={log2}
+          setLog={setLog2}
+          running={running2}
+          setRunning={setRunning2}
+        >
           {`package main
 
 import (
@@ -157,7 +181,13 @@ func main() {
           alt="Graph d'exemple pris ici"
         />
 
-        <CodeBlock endpoint="https://go-backend-531057961347.europe-west1.run.app/lab2?fn=q3">
+        <CodeBlock
+          endpoint="https://go-backend-531057961347.europe-west1.run.app/lab2?fn=q3"
+          log={log3}
+          setLog={setLog3}
+          running={running3}
+          setRunning={setRunning3}
+        >
           {`package main
 
 import (
@@ -233,7 +263,13 @@ func main() {
           <code>terminate</code>.
         </TextBlock>
 
-        <CodeBlock endpoint="https://go-backend-531057961347.europe-west1.run.app/lab2?fn=q4">
+        <CodeBlock
+          endpoint="https://go-backend-531057961347.europe-west1.run.app/lab2?fn=q4"
+          log={log4}
+          setLog={setLog4}
+          running={running4}
+          setRunning={setRunning4}
+        >
           {`package main
 
 import "fmt"
@@ -300,7 +336,13 @@ func main() {
           alt="Graph d'exemple pris ici"
         />
 
-        <CodeBlock endpoint="https://go-backend-531057961347.europe-west1.run.app/lab2?fn=q5">
+        <CodeBlock
+          endpoint="https://go-backend-531057961347.europe-west1.run.app/lab2?fn=q5"
+          log={log5}
+          setLog={setLog5}
+          running={running5}
+          setRunning={setRunning5}
+        >
           {`package main
 
 import "fmt"

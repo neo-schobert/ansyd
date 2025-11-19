@@ -3,12 +3,23 @@ import React, { useState, useEffect, useRef } from "react";
 import Prism from "prismjs";
 import "prismjs/components/prism-go";
 import "prismjs/themes/prism-okaidia.css";
+import { Button, Snackbar } from "@mui/joy";
+import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
 
 interface CodeBlockProps {
+  id?: string;
   children: string;
   endpoint?: string;
   wsRef?: React.RefObject<WebSocket | null>;
   isClient?: boolean; // true = client, false = server
+  log?: string;
+  setLog?: React.Dispatch<React.SetStateAction<string>>;
+  setClientLog?: React.Dispatch<React.SetStateAction<string>>;
+  isClientRunningRef?: React.RefObject<boolean>;
+  running: boolean;
+  setRunning: React.Dispatch<React.SetStateAction<boolean>>;
+  handleStopServers?: () => void;
+  runningServers?: boolean[];
 }
 
 interface LabResponse {
@@ -17,16 +28,28 @@ interface LabResponse {
 }
 
 export const CodeBlock: React.FC<CodeBlockProps> = ({
+  id,
   children,
   endpoint,
   wsRef,
   isClient,
+  log,
+  setLog,
+  setClientLog,
+  isClientRunningRef,
+  running,
+  setRunning,
+  handleStopServers,
+  runningServers,
 }) => {
-  const [log, setLog] = useState<string>("");
-  const [running, setRunning] = useState(false);
-  const intervalRef = useRef<number | null>(null);
   const isBrowser = typeof window !== "undefined";
   const logContainerRef = useRef<HTMLDivElement | null>(null);
+  let [localLog, setLocalLog] = useState("");
+  if (setLog) {
+    [localLog, setLocalLog] = [log!, setLog];
+  }
+  const [showSnackbarOpenClient, setShowSnackbarOpenClient] = useState(false);
+  const [showSnackbarOpenServer, setShowSnackbarOpenServer] = useState(false);
 
   useEffect(() => {
     Prism.highlightAll();
@@ -38,44 +61,59 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     if (container) {
       container.scrollTop = container.scrollHeight;
     }
-  }, [log]);
+  }, [localLog]);
 
   const appendLog = (msg: string) =>
-    setLog((prev) => (prev ? prev + "\n" + msg : msg));
+    setLocalLog((prev) => (prev ? prev + "\n" + msg : msg));
+
+  const appendClientLog = (msg: string) => {
+    if (setClientLog) setClientLog((prev) => (prev ? prev + "\n" + msg : msg));
+  };
+
+  const sendMsgClient = () => {
+    if (!wsRef || !wsRef.current) return appendClientLog("❌ wsRef non défini");
+    const ws = wsRef.current;
+
+    if (ws.readyState === WebSocket.OPEN && isClientRunningRef?.current) {
+      appendClientLog("Client Send: Hi UDP Server, How are you doing?");
+      ws.send("Hi UDP Server, How are you doing?");
+    }
+  };
 
   const startWebSocketClient = () => {
-    if (!wsRef) return appendLog("❌ wsRef non défini");
-    if (!endpoint) return appendLog("❌ Endpoint non défini");
+    if (!wsRef || !wsRef.current) return appendLog("❌ wsRef non défini");
     setRunning(true);
 
-    const ws = new WebSocket(endpoint);
-    wsRef.current = ws;
+    if (runningServers?.every((r) => !r)) {
+      setShowSnackbarOpenServer(true);
+    }
 
-    ws.onclose = () => appendLog("⚠️ WebSocket fermé");
-    ws.onerror = () => appendLog("❌ Erreur WebSocket");
+    if (isClientRunningRef) {
+      console.log("hey2", isClientRunningRef);
+      isClientRunningRef.current = true;
+    }
 
-    // boucle toutes les secondes comme ton client UDP Go
-    intervalRef.current = window.setInterval(() => {
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        // équivalent de fmt.Fprintf(conn, ...)
-        appendLog("Client Send: " + "Hi UDP Server, How are you doing?");
-        wsRef.current.send("Hi UDP Server, How are you doing?");
+    const sendMsg = () => {
+      if (!wsRef || !wsRef.current) return appendLog("❌ wsRef non défini");
+      const ws = wsRef.current;
+
+      if (ws.readyState === WebSocket.OPEN) {
+        appendLog("Client Send: Hi UDP Server, How are you doing?");
+        ws.send("Hi UDP Server, How are you doing?");
       }
-    }, 1000);
+    };
+
+    // Premier envoi
+    sendMsg();
   };
 
   const stopWebSocket = () => {
     if (!wsRef) return appendLog("❌ wsRef non défini");
     setRunning(false);
-    if (intervalRef.current !== null) {
-      clearInterval(intervalRef.current);
-      intervalRef.current = null;
-    }
-    if (wsRef.current) {
-      wsRef.current.close();
-      wsRef.current = null;
-    }
-    appendLog("⏹ Client arrêté");
+    if (isClientRunningRef) isClientRunningRef.current = false;
+    setTimeout(() => {
+      appendLog("⏹ Client arrêté");
+    }, 1000);
   };
 
   const handleExecute = () => {
@@ -95,22 +133,34 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         setRunning(false);
         wsRef.current.onmessage = () => {};
       } else {
+        if (handleStopServers) handleStopServers();
         wsRef.current.send("start" + endpoint);
+        if (!isClientRunningRef?.current) {
+          setShowSnackbarOpenClient(true);
+        }
         setRunning(true);
-        wsRef.current.onmessage = (event: MessageEvent) =>
-          appendLog(event.data);
+        wsRef.current.onmessage = (event: MessageEvent) => {
+          if (event.data.startsWith("Server reply: ")) {
+            appendLog(event.data);
+          } else {
+            appendLog(event.data);
+            setTimeout(() => {
+              if (event.data === "Hello UDP Client") sendMsgClient();
+            }, 1000);
+          }
+        };
       }
     }
   };
 
   const handleExecuteHTTP = async () => {
-    setLog("⏳ Exécution…");
+    setLocalLog("⏳ Exécution…");
 
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 30000); // 30s
 
     if (!endpoint) {
-      setLog("❌ Endpoint non défini");
+      setLocalLog("❌ Endpoint non défini");
       return;
     }
     try {
@@ -128,15 +178,49 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       const output = data.stderr
         ? `${data.stdout}\n⚠️ Erreur : ${data.stderr}`
         : data.stdout;
-      setLog(output.replace(/\\n/g, "\n").replace(/\\t/g, "\t"));
+      setLocalLog(output.replace(/\\n/g, "\n").replace(/\\t/g, "\t"));
     } catch (err) {
       clearTimeout(timeout);
-      setLog(`❌ Erreur : ${String(err)}`);
+      setLocalLog(`❌ Erreur : ${String(err)}`);
     }
   };
 
+  const smoothScrollTo = (targetPosition: number, duration: number) => {
+    const startPosition = window.pageYOffset;
+    const distance = targetPosition - startPosition;
+    let startTime: number | null = null;
+
+    const animation = (currentTime: number) => {
+      if (startTime === null) startTime = currentTime;
+      const timeElapsed = currentTime - startTime;
+      const run = easeInOutQuad(timeElapsed, startPosition, distance, duration);
+      window.scrollTo(0, run);
+
+      // Continuer l'animation tant que la durée n'est pas atteinte
+      if (timeElapsed < duration) {
+        requestAnimationFrame(animation);
+      } else {
+        // Réactiver le défilement une fois l'animation terminée
+        document.body.style.overflow = "";
+      }
+    };
+
+    requestAnimationFrame(animation);
+  };
+
+  // Fonction de timing pour lisser l'animation
+  const easeInOutQuad = (t: number, b: number, c: number, d: number) => {
+    t /= d / 2;
+    if (t < 1) return (c / 2) * t * t + b;
+    t--;
+    return (-c / 2) * (t * (t - 2) - 1) + b;
+  };
+
   return (
-    <div className="bg-gray-50 p-4 rounded-xl shadow-md border border-gray-200">
+    <div
+      id={id ? id : undefined}
+      className="bg-gray-50 p-4 rounded-xl shadow-md border border-gray-200"
+    >
       <pre
         className="rounded-lg overflow-x-auto text-sm language-go"
         tabIndex={0}
@@ -144,7 +228,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         <code className="language-go">{children}</code>
       </pre>
 
-      {wsRef && isClient && endpoint && (
+      {wsRef && isClient && (
         <button
           onClick={handleExecute}
           className={`mt-3 px-4 py-2 rounded-lg text-white transition ${
@@ -178,15 +262,75 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
         </button>
       )}
 
-      {isBrowser && log && endpoint && (
+      {isBrowser && localLog && (
         <div
           ref={logContainerRef}
           className="mt-3 bg-gray-900 text-green-400 p-3 rounded-lg font-mono text-sm whitespace-pre-wrap overflow-y-auto"
           style={{ maxHeight: "300px" }}
         >
-          {log.trim()}
+          {localLog.trim()}
         </div>
       )}
+      <Snackbar
+        variant="soft"
+        color="warning"
+        open={showSnackbarOpenClient}
+        onClose={() => {
+          setShowSnackbarOpenClient(false);
+        }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        startDecorator={<ExclamationTriangleIcon />}
+        autoHideDuration={3000}
+        endDecorator={
+          <Button
+            onClick={() => {
+              setShowSnackbarOpenClient(false);
+              const client = document.getElementById("client");
+              if (client) {
+                // Désactiver le défilement manuel
+                const offset = 100; // Ajuste cette valeur selon tes besoins
+                const targetPosition = client.offsetTop - offset;
+                document.body.style.overflow = "hidden";
+                smoothScrollTo(targetPosition, 2000); // Défilement sur 1 seconde
+              }
+            }}
+            size="sm"
+            variant="soft"
+            color="warning"
+          >
+            Ouvir le Client
+          </Button>
+        }
+      >
+        ⚠️ Assurez-vous que le client UDP est démarré pour recevoir les messages
+        du serveur.
+      </Snackbar>
+      <Snackbar
+        variant="soft"
+        color="warning"
+        open={showSnackbarOpenServer}
+        onClose={() => {
+          setShowSnackbarOpenServer(false);
+        }}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+        startDecorator={<ExclamationTriangleIcon />}
+        autoHideDuration={3000}
+        endDecorator={
+          <Button
+            onClick={() => {
+              setShowSnackbarOpenServer(false);
+            }}
+            size="sm"
+            variant="soft"
+            color="warning"
+          >
+            Fermer
+          </Button>
+        }
+      >
+        ⚠️ Vous devriez d&apos;abord démarrer un server pour que le message du
+        client soit écouté.
+      </Snackbar>
     </div>
   );
 };

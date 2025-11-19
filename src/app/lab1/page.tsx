@@ -1,8 +1,19 @@
 // app/lab1/page.tsx
+"use client";
 import { CodeBlock } from "@/components/CodeBlock";
 import { TextBlock } from "@/components/TextBlock";
+import { useState } from "react";
 
 const Lab1Page = () => {
+  const [log1, setLog1] = useState("");
+  const [log2, setLog2] = useState("");
+  const [log3, setLog3] = useState("");
+  const [log4, setLog4] = useState("");
+  const [running1, setRunning1] = useState(false);
+  const [running2, setRunning2] = useState(false);
+  const [running3, setRunning3] = useState(false);
+  const [running4, setRunning4] = useState(false);
+
   return (
     <div className="min-h-screen bg-linear-to-b from-gray-50 via-gray-100 to-gray-50 p-6 pt-40">
       {/* Titre principal */}
@@ -34,7 +45,13 @@ const Lab1Page = () => {
           <strong>Alice</strong> associé au vecteur <code>[1.1, 2.2]</code>.
         </TextBlock>
 
-        <CodeBlock endpoint="https://go-backend-531057961347.europe-west1.run.app/lab1?fn=q1">
+        <CodeBlock
+          endpoint="https://go-backend-531057961347.europe-west1.run.app/lab1?fn=q1"
+          log={log1}
+          setLog={setLog1}
+          running={running1}
+          setRunning={setRunning1}
+        >
           {`package main
 
 import "fmt"
@@ -84,7 +101,13 @@ func main() {
           communication sûre entre threads sans partage mémoire explicite.
         </TextBlock>
 
-        <CodeBlock endpoint="https://go-backend-531057961347.europe-west1.run.app/lab1?fn=q2">
+        <CodeBlock
+          endpoint="https://go-backend-531057961347.europe-west1.run.app/lab1?fn=q2"
+          log={log2}
+          setLog={setLog2}
+          running={running2}
+          setRunning={setRunning2}
+        >
           {`package main
 
 import "fmt"
@@ -136,7 +159,13 @@ func main() {
           devient indispensable lorsque le nombre de goroutines augmente.
         </TextBlock>
 
-        <CodeBlock endpoint="https://go-backend-531057961347.europe-west1.run.app/lab1?fn=q3">
+        <CodeBlock
+          endpoint="https://go-backend-531057961347.europe-west1.run.app/lab1?fn=q3"
+          log={log3}
+          setLog={setLog3}
+          running={running3}
+          setRunning={setRunning3}
+        >
           {`package main
 
 import "fmt"
@@ -188,7 +217,13 @@ func main() {
           est renvoyé via le même channel.
         </TextBlock>
 
-        <CodeBlock endpoint="https://go-backend-531057961347.europe-west1.run.app/lab1?fn=q4">
+        <CodeBlock
+          endpoint="https://go-backend-531057961347.europe-west1.run.app/lab1?fn=q4"
+          log={log4}
+          setLog={setLog4}
+          running={running4}
+          setRunning={setRunning4}
+        >
           {`package main
 
 import "fmt"

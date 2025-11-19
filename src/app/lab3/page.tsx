@@ -4,7 +4,10 @@
 import { CodeBlock } from "@/components/CodeBlock";
 import { FloatingClientLog } from "@/components/FloatingClientLog";
 import { TextBlock } from "@/components/TextBlock";
-import { ExclamationTriangleIcon } from "@heroicons/react/24/outline";
+import {
+  CheckCircleIcon,
+  ExclamationTriangleIcon,
+} from "@heroicons/react/24/outline";
 import { Button, Snackbar } from "@mui/joy";
 import { useEffect, useRef, useState } from "react";
 
@@ -34,6 +37,8 @@ const Lab3Page = () => {
 
   const [stopServersSnackBar, setStopServersSnackBar] = useState("");
   const [stopClientsSnackBar, setStopClientsSnackBar] = useState("");
+  const [openWSStopSnackbar, setOpenWSStopSnackbar] = useState(false);
+  const [openWSConnectSnackbar, setOpenWSConnectSnackbar] = useState(false);
 
   useEffect(() => {
     let ws: WebSocket;
@@ -46,15 +51,19 @@ const Lab3Page = () => {
       wsRef.current = ws;
 
       ws.onopen = () => {
+        setOpenWSConnectSnackbar(true);
         console.log("WebSocket connected");
       };
 
       ws.onclose = () => {
         console.log("WebSocket closed, reconnecting...");
+        handleStopClients();
+        handleStopServers();
+        setOpenWSStopSnackbar(true);
         reconnectTimeout = setTimeout(connect, 2000); // reconnect après 2s
       };
 
-      ws.onerror = (_) => {
+      ws.onerror = () => {
         ws.close(); // ferme pour déclencher onclose
       };
     };
@@ -66,6 +75,37 @@ const Lab3Page = () => {
       ws.close();
     };
   }, []);
+
+  const safeGuard = () => {
+    const allGood =
+      setLogClient3 !== undefined &&
+      setLogServer5 !== undefined &&
+      setLogServer8 !== undefined &&
+      setLogClient9 !== undefined &&
+      setLogClient10 !== undefined &&
+      setLogClient11 !== undefined &&
+      setLogClient12 !== undefined &&
+      setLogClient13 !== undefined &&
+      isClientRunningRef?.current !== undefined &&
+      rttsRef?.current !== undefined &&
+      runningClient3 !== undefined &&
+      runningServer5 !== undefined &&
+      runningServer8 !== undefined &&
+      runningClient9 !== undefined &&
+      runningClient10 !== undefined &&
+      runningClient11 !== undefined &&
+      runningClient12 !== undefined &&
+      runningClient13 !== undefined &&
+      stopServersSnackBar !== undefined &&
+      stopClientsSnackBar !== undefined &&
+      openWSStopSnackbar !== undefined &&
+      openWSConnectSnackbar !== undefined;
+
+    if (!allGood) return null;
+    return true;
+  };
+
+  if (!safeGuard()) return null;
 
   const handleStopServers = () => {
     if (wsRef.current) {
@@ -756,6 +796,58 @@ func main() {
         }
       >
         ⚠️ {stopClientsSnackBar}
+      </Snackbar>
+
+      <Snackbar
+        variant="soft"
+        color="success"
+        open={openWSConnectSnackbar}
+        onClose={() => {
+          setOpenWSConnectSnackbar(false);
+        }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        startDecorator={<CheckCircleIcon />}
+        autoHideDuration={3000}
+        endDecorator={
+          <Button
+            onClick={() => {
+              setOpenWSConnectSnackbar(false);
+            }}
+            size="sm"
+            variant="soft"
+            color="success"
+          >
+            Fermer
+          </Button>
+        }
+      >
+        ✅ WebSocket connecté au serveur.
+      </Snackbar>
+      <Snackbar
+        variant="soft"
+        color="danger"
+        open={openWSStopSnackbar}
+        onClose={() => {
+          setOpenWSStopSnackbar(false);
+        }}
+        anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
+        startDecorator={<ExclamationTriangleIcon />}
+        autoHideDuration={3000}
+        endDecorator={
+          <Button
+            onClick={() => {
+              setOpenWSStopSnackbar(false);
+            }}
+            size="sm"
+            variant="soft"
+            color="danger"
+          >
+            Fermer
+          </Button>
+        }
+      >
+        ⚠️ WebSocket déconnecté du serveur. Tous les clients et serveurs ont été
+        arrêtés.
       </Snackbar>
     </div>
   );

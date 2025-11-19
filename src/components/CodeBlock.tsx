@@ -56,6 +56,16 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   const [showSnackbarOpenServer, setShowSnackbarOpenServer] = useState(false);
   const [loading, setLoading] = useState(0);
   const [shouldSend, setShouldSend] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 640);
+    };
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     Prism.highlightAll();
@@ -73,16 +83,23 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     setLocalLog((prev) => (prev ? prev + "\n" + msg : msg));
 
   const appendClientLog = (msg: string) => {
-    console.log("Appending to client log:", msg);
     if (
       isClientRunningRef &&
       isClientRunningRef?.current >= 0 &&
-      setClientLogs &&
-      setClientLogs[isClientRunningRef?.current]
+      setClientLogs
     ) {
       setClientLogs[isClientRunningRef?.current]((prev) =>
         prev ? prev + "\n" + msg : msg
       );
+    } else {
+      console.log("isClientRunningRef:", isClientRunningRef);
+      console.log("setClientLogs:", setClientLogs);
+      if (!isClientRunningRef) {
+        console.log("isClientRunningRef is undefined");
+      }
+      if (!setClientLogs) {
+        console.log("setClientLogs is undefined");
+      }
     }
   };
 
@@ -247,6 +264,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
     }
 
     setRunning(true);
+    setLocalLog("");
 
     const sendMsg = () => {
       if (!wsRef || !wsRef.current) return appendLog("❌ wsRef non défini");
@@ -429,11 +447,16 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       id={id ? id : undefined}
       className="bg-gray-50 p-4 rounded-xl shadow-md border border-gray-200"
     >
-      <pre
-        className="rounded-lg overflow-x-auto text-[0.8rem] sm:text-sm language-go"
-        tabIndex={0}
-      >
-        <code className="language-go">{children}</code>
+      <pre className="rounded-lg overflow-x-auto language-go" tabIndex={0}>
+        <code
+          style={{
+            fontSize: isMobile ? "0.7rem" : "1rem",
+            lineHeight: "1.3",
+          }}
+          className="language-go"
+        >
+          {children}
+        </code>
       </pre>
 
       {wsRef && isClient && (

@@ -229,6 +229,12 @@ func main() {
     <-done_2
 }`}
         </CodeBlock>
+
+        <h1 className="text-2xl font-bold text-gray-900 mb-12 text-center">
+          RETARD - J&apos;ai un léger retard encore dans cette UE qui devrait
+          être rattrapé intégralement d&apos;ici la fin du week-end. Je
+          m&apos;en excuse. La suite arrive bientôt (deadline dimanche).
+        </h1>
       </div>
     </div>
   );

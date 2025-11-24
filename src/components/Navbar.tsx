@@ -71,19 +71,21 @@ export default function NavigationBar() {
             </div>
 
             <PopoverGroup className="hidden lg:flex lg:gap-x-5">
-              {["Lab1", "Lab2", "Lab3", "Lab4"].map((lab, i) => (
-                <Link
-                  key={lab}
-                  href={`/lab${i + 1}`}
-                  className="flex items-center gap-x-1 rounded-md px-3 py-2 text-base font-semibold leading-6 text-gray-800 hover:bg-gray-100 hover:shadow-md duration-300 ease-in-out transform hover:scale-105"
-                >
-                  <CpuChipIcon
-                    aria-hidden="true"
-                    className="h-6 w-6 text-indigo-500"
-                  />
-                  {lab}
-                </Link>
-              ))}
+              {["Lab1", "Lab2", "Lab3", "Lab4", "Lab5", "Lab6"].map(
+                (lab, i) => (
+                  <Link
+                    key={lab}
+                    href={`/lab${i + 1}`}
+                    className="flex items-center gap-x-1 rounded-md px-3 py-2 text-base font-semibold leading-6 text-gray-800 hover:bg-gray-100 hover:shadow-md duration-300 ease-in-out transform hover:scale-105"
+                  >
+                    <CpuChipIcon
+                      aria-hidden="true"
+                      className="h-6 w-6 text-indigo-500"
+                    />
+                    {lab}
+                  </Link>
+                )
+              )}
             </PopoverGroup>
           </nav>
 
@@ -127,20 +129,22 @@ export default function NavigationBar() {
               <div className="mt-6 flow-root">
                 <div className="-my-6 divide-y divide-gray-200">
                   <div className="space-y-2 py-6">
-                    {["Lab1", "Lab2", "Lab3", "Lab4"].map((lab, i) => (
-                      <Link
-                        key={lab}
-                        onClick={() => setMobileMenuOpen(false)}
-                        href={`/lab${i + 1}`}
-                        className="-mx-3 flex flex-row space-x-5 rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-800 hover:bg-gray-100 hover:shadow-md"
-                      >
-                        <CpuChipIcon
-                          aria-hidden="true"
-                          className="h-6 w-6 text-indigo-500"
-                        />
-                        <div>{lab}</div>
-                      </Link>
-                    ))}
+                    {["Lab1", "Lab2", "Lab3", "Lab4", "Lab5", "Lab6"].map(
+                      (lab, i) => (
+                        <Link
+                          key={lab}
+                          onClick={() => setMobileMenuOpen(false)}
+                          href={`/lab${i + 1}`}
+                          className="-mx-3 flex flex-row space-x-5 rounded-lg px-3 py-2 text-base font-semibold leading-7 text-gray-800 hover:bg-gray-100 hover:shadow-md"
+                        >
+                          <CpuChipIcon
+                            aria-hidden="true"
+                            className="h-6 w-6 text-indigo-500"
+                          />
+                          <div>{lab}</div>
+                        </Link>
+                      )
+                    )}
                   </div>
                 </div>
               </div>

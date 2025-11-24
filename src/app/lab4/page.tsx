@@ -3,6 +3,7 @@
 import { ArchitectureQ1 } from "@/components/Architecture";
 import { ArchitectureQ2_1 } from "@/components/ArchitectureQ2_1";
 import { ArchitectureQ2_2 } from "@/components/ArchitectureQ2_2";
+import ArchitectureQ3 from "@/components/ArchitectureQ3";
 import { CodeBlock } from "@/components/CodeBlock";
 import { TextBlock } from "@/components/TextBlock";
 import { useState } from "react";
@@ -11,9 +12,12 @@ const Lab4Page = () => {
   const [log1, setLog1] = useState("");
   const [log2, setLog2] = useState("");
   const [log3, setLog3] = useState("");
+  const [log4, setLog4] = useState("");
   const [running1, setRunning1] = useState(false);
   const [running2, setRunning2] = useState(false);
   const [running3, setRunning3] = useState(false);
+  const [running4, setRunning4] = useState(false);
+  const [count, setCount] = useState(2);
 
   return (
     <div className="min-h-screen bg-linear-to-b from-gray-50 via-gray-100 to-gray-50 p-6 pt-40">
@@ -100,11 +104,9 @@ func main() {
           la concurrence et l&apos;aléa dans l&apos;ordonnancement des
           goroutines par rapport à un PC local.
         </TextBlock>
-
         <h2 className="text-2xl font-semibold text-gray-800">
           Question 2 — Architectures Alternatives
         </h2>
-
         <TextBlock>
           Pour que les deux workers reçoivent tous les jobs, on ajoute
           d&apos;abord une routine de broadcast. Cette routine lit les jobs
@@ -229,12 +231,131 @@ func main() {
     <-done_2
 }`}
         </CodeBlock>
+        <h2 className="text-2xl font-semibold text-gray-800">
+          Question 3 — Failure Detection
+        </h2>
 
-        <h1 className="text-2xl font-bold text-gray-900 mb-12 text-center">
-          RETARD - J&apos;ai un léger retard encore dans cette UE qui devrait
-          être rattrapé intégralement d&apos;ici la fin du week-end. Je
-          m&apos;en excuse. La suite arrive bientôt (deadline dimanche).
+        <TextBlock>
+          On a deux routines : la goroutine principale qui envoie des jobs au
+          worker (Node1). Ils sont symbolisés ici par deux noeuds. Pour
+          implémenter le failure detector, on ajoute deux channels
+          supplémentaires entre les deux noeuds pour les heartbeats et les
+          réponses. Ces channels sont symbolisés par des edges entre nos deux
+          noeuds. Periodiquement, le noeud principal envoie une requête de
+          heartbeat au worker, il y répond alors avec un délai de plus en plus
+          élevé pour simuler un ralentissement progressif. Si la réponse
+          n&apos;est pas reçue dans le délai imparti (configurable ci-dessous),
+          le worker est considéré comme défaillant et la routine principale
+          arrête d&apos;envoyer des jobs.
+        </TextBlock>
+
+        <ArchitectureQ3 count={count} />
+
+        <TextBlock>
+          Le délai d&apos;attente pour la réponse du heartbeat peut être ajusté
+          ci-dessous :
+        </TextBlock>
+        <h1 className="text-gray-800 justify-center flex items-center gap-3">
+          <input
+            type="number"
+            value={count}
+            onChange={(e) => setCount(Number(e.target.value))}
+            max={10}
+            min={1}
+            step={1}
+            className="border border-gray-300 rounded px-2 py-1 w-20 text-black"
+          />
+          <p className="text-gray-800">secondes</p>
         </h1>
+        <CodeBlock
+          endpoint={`https://go-backend-531057961347.europe-west1.run.app/lab4?fn=q3&cnt=${count}`}
+          log={log4}
+          setLog={setLog4}
+          running={running4}
+          setRunning={setRunning4}
+        >
+          {`package main
+
+import (
+	"fmt"
+	"time"
+)
+
+func main() {
+
+	jobs_1 := make(chan int, 5)
+	heartbeat := make(chan int)   // channel for heartbeat requests
+	heartbeatReply := make(chan int) // channel for heartbeat replies
+
+	done := make(chan bool)
+
+	// Worker goroutine
+	go func() {
+		i := 1
+		for {
+			select {
+			case j, more := <-jobs_1:
+				if more {
+					fmt.Println("Node 1 received job", j)
+				} else {
+					fmt.Println("Node 1 received all jobs")
+					done <- true
+					return
+				}
+
+			case hb, more := <-heartbeat:
+				if more {
+					fmt.Println("Node 1 received the heartbeat", hb)
+
+					// simulate slow-down / failure
+					time.Sleep(time.Duration(i) * time.Second)
+					i++
+
+					// reply to main
+					heartbeatReply <- hb
+				} else {
+					fmt.Println("I'm not receiving jobs")
+					done <- true
+					return
+				}
+			}
+		}
+	}()
+
+	// MAIN GOROUTINE
+	for j := 1; j <= 10; j++ {
+
+		if j%2 == 1 {
+			// Normal job
+			jobs_1 <- j
+			fmt.Println("sent job", j)
+
+		} else {
+			// HEARTBEAT REQUEST
+			fmt.Println("sent heartbeat", j)
+			heartbeat <- j
+
+			// FAILURE DETECTOR
+			select {
+			case <-heartbeatReply:
+				fmt.Println("received heartbeat reply", j)
+
+			case <-time.After(${count} * time.Second):
+				fmt.Println("FAILURE DETECTED: worker too slow")
+				close(jobs_1)
+				close(heartbeat)
+				close(heartbeatReply)
+				return
+			}
+		}
+	}
+
+	close(jobs_1)
+	fmt.Println("sent all jobs")
+
+	<-done
+}`}
+        </CodeBlock>
       </div>
     </div>
   );

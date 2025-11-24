@@ -356,6 +356,47 @@ func main() {
 	<-done
 }`}
         </CodeBlock>
+
+        <h2 className="text-2xl font-semibold text-gray-800">
+          Question 4 — Cas n noeuds
+        </h2>
+
+        <TextBlock>
+          Pour que node i puisse communiquer vers node j, il faut un canal de
+          jobs un canal de heartbeat et un canal de heartbeat reply. La
+          communication devant être asymétrique, il nous faut dupliquer tout
+          cela. Il nous faut donc 2 canaux de jobs, 2 canaux de heartbeat et 2
+          canaux de heartbeat reply pour que les deux nodes puissent communiquer
+          entre eux. Chaque node aura une goroutine qui écoutera les jobs et les
+          heartbeats entrants, et une autre goroutine dans la routine principale
+          qui enverra les jobs et les heartbeats. Le failure detector sera
+          également implémenté dans la routine principale pour chaque node,
+          surveillant les réponses aux heartbeats. Ainsi, chaque node pourra
+          envoyer et recevoir des jobs et des heartbeats de manière
+          indépendante, tout en détectant les défaillances de l&apos;autre node.
+        </TextBlock>
+
+        <CodeBlock
+          endpoint={`https://go-backend-531057961347.europe-west1.run.app/lab4?fn=q3&cnt=${count}`}
+          log={log4}
+          setLog={setLog4}
+          running={running4}
+          setRunning={setRunning4}
+        >
+          {`
+type Communications struct {
+    Jobs_ij chan int
+    Jobs_ji chan int
+    Heartbeat_ij chan int
+    Heartbeat_ji chan int
+    HeartbeatReply_ij chan int
+    HeartbeatReply_ji chan int
+}`}
+        </CodeBlock>
+
+        <h2 className="text-2xl font-semibold text-gray-800">
+          Question 5 — sending_job
+        </h2>
       </div>
     </div>
   );

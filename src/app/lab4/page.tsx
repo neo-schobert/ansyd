@@ -13,10 +13,16 @@ const Lab4Page = () => {
   const [log2, setLog2] = useState("");
   const [log3, setLog3] = useState("");
   const [log4, setLog4] = useState("");
+  const [log5, setLog5] = useState("");
+  const [log6, setLog6] = useState("");
+  const [log7, setLog7] = useState("");
   const [running1, setRunning1] = useState(false);
   const [running2, setRunning2] = useState(false);
   const [running3, setRunning3] = useState(false);
   const [running4, setRunning4] = useState(false);
+  const [running5, setRunning5] = useState(false);
+  const [running6, setRunning6] = useState(false);
+  const [running7, setRunning7] = useState(false);
   const [count, setCount] = useState(2);
 
   return (
@@ -377,11 +383,10 @@ func main() {
         </TextBlock>
 
         <CodeBlock
-          endpoint={`https://go-backend-531057961347.europe-west1.run.app/lab4?fn=q3&cnt=${count}`}
-          log={log4}
-          setLog={setLog4}
-          running={running4}
-          setRunning={setRunning4}
+          log={log5}
+          setLog={setLog5}
+          running={running5}
+          setRunning={setRunning5}
         >
           {`
 type Communications struct {
@@ -395,8 +400,65 @@ type Communications struct {
         </CodeBlock>
 
         <h2 className="text-2xl font-semibold text-gray-800">
-          Question 5 — sending_job
+          Question 5 — sending_job et handling_jobs
         </h2>
+
+        <CodeBlock
+          log={log6}
+          setLog={setLog6}
+          running={running6}
+          setRunning={setRunning6}
+        >
+          {`
+func sending_job(id int, interarrival_time int, Jobs_Sent chan int) {
+	jobID := 1
+
+	for {
+		Jobs_Sent <- jobID
+		fmt.Printf("node %d → sent job %d\\n", id, jobID)
+
+		jobID++
+		time.Sleep(time.Duration(interarrival_time) * time.Second)
+	}
+}
+
+
+func handling_jobs(id int, Jobs_Received chan int) {
+	for job := range Jobs_Received {
+		fmt.Printf("node %d → received job %d (discarded)\\n", id, job)
+	}
+}`}
+        </CodeBlock>
+
+        <h2 className="text-2xl font-semibold text-gray-800">
+          Question 6 — Heartbeat
+        </h2>
+
+        <CodeBlock
+          log={log7}
+          setLog={setLog7}
+          running={running7}
+          setRunning={setRunning7}
+        >
+          {`
+func answering_heartbeat(id int, Heartbeat_Received chan int, ACK_Sent chan int) {
+	for {
+		hb, ok := <-Heartbeat_Received
+		if !ok {
+			// le canal est fermé, on arrête la goroutine
+			return
+		}
+
+		// petite sieste proportionnelle à l’ID du node
+		time.Sleep(time.Duration(id) * time.Second)
+
+    // Réponse
+		ACK_Sent <- hb
+		fmt.Printf("node %d → ACK heartbeat %d\\n", id, hb)
+	}
+}
+`}
+        </CodeBlock>
       </div>
     </div>
   );

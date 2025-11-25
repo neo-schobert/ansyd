@@ -938,8 +938,7 @@ func NodeLab4(id int, Interarrival_time int,
 	go answering_heartbeat(id, Heartbeat_Received, ACK_Sent)
 }
 
-// ---------------------- Topologie & lancement ----------------------
-func Q10_Lab4() {
+func main() {
 	var listCommunications []CommunicationsQ10
 	out := ""
 

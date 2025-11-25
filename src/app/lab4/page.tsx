@@ -29,6 +29,7 @@ const Lab4Page = () => {
   const [running8, setRunning8] = useState(false);
   const [running9, setRunning9] = useState(false);
   const [count, setCount] = useState(2);
+  const [count9, setCount9] = useState(2);
 
   return (
     <div className="min-h-screen bg-linear-to-b from-gray-50 via-gray-100 to-gray-50 p-6 pt-40">
@@ -457,12 +458,11 @@ func answering_heartbeat(id int, Heartbeat_Received chan int, ACK_Sent chan int)
 		// petite sieste proportionnelle à l’ID du node
 		time.Sleep(time.Duration(id) * time.Second)
 
-    // Réponse
+		// Réponse
 		ACK_Sent <- hb
-		fmt.Printf("node %d → ACK heartbeat %d\\n", id, hb)
+		fmt.Printf("node %d → ACK heartbeat %d\n", id, hb)
 	}
-}
-`}
+}`}
         </CodeBlock>
 
         <h2 className="text-2xl font-semibold text-gray-800">
@@ -485,55 +485,62 @@ func answering_heartbeat(id int, Heartbeat_Received chan int, ACK_Sent chan int)
         >
           {`
 func failure_detector(id int, Heartbeat_Sent chan int, ACK_Received chan int) {
-    var j int = 1
-    var estimate_time float64 = 1
-    var average_response_time float64 = 1
-    var i float64 = 1
+	var j int = 1
+	var estimate_time float64 = 1
+	var average_response_time float64 = 1
+	var i float64 = 1
 
-    // premier heartbeat envoyé
-    start := time.Now()
-    Heartbeat_Sent <- j
+	// premier heartbeat envoyé
+	start := time.Now()
 
-    for {
-        select {
+	Heartbeat_Sent <- j
 
-        case <-time.After(100):
-            // timeout -> pas d'ACK à temps
-            elapsed := float64(time.Since(start).Milliseconds())
-            estimate_time = elapsed
+	for {
+		select {
 
-            // mise à jour de la moyenne
-            average_response_time = (average_response_time*i + estimate_time) / (i + 1)
-            i++
+		case <-time.After(${count9} * time.Second):
+			// timeout -> pas d'ACK à temps
+			elapsed := float64(time.Since(start).Milliseconds())
+			estimate_time = elapsed
 
-            fmt.Printf("node %d → timeout on heartbeat %d (est %.1f ms, avg %.1f ms)\\n",
-                id, j, estimate_time, average_response_time)
+			fmt.Printf("node %d → timeout on heartbeat %d (est %.1f ms, avg %.1f ms)\n",
+				id, j, estimate_time, average_response_time)
 
-            // nouveau heartbeat
-            j++
-            start = time.Now()
-            Heartbeat_Sent <- j
+			return
 
-        case <-ACK_Received:
-            // ACK reçu -> réponse OK
-            elapsed := float64(time.Since(start).Milliseconds())
-            estimate_time = elapsed
+		case ack, ok := <-ACK_Received:
 
-            // mise à jour moyenne
-            average_response_time = (average_response_time*i + estimate_time) / (i + 1)
-            i++
+			if !ok {
+				// le canal est fermé, on arrête la goroutine
+				return
+			}
 
-            fmt.Printf("node %d → ACK heartbeat %d (resp %.1f ms, avg %.1f ms)\\n",
-                id, j, estimate_time, average_response_time)
+			// Vérifier que l'ACK correspond bien au heartbeat courant.
+			if ack != j {
+				// ACK pour un ancien heartbeat => on l'ignore (log optionnel)
+				fmt.Printf("node %d → received stale ACK %d (expect %d), ignoring\n", id, ack, j)
+				// on continue d'attendre le bon ack, timer reste en place
+				continue
+			}
 
-            // heartbeat suivant
-            j++
-            start = time.Now()
-            Heartbeat_Sent <- j
-        }
-    }
-}
-  `}
+			// ACK reçu -> réponse OK
+			elapsed := float64(time.Since(start).Seconds())
+			estimate_time = elapsed
+
+			// mise à jour moyenne
+			average_response_time = (average_response_time*i + estimate_time) / (i + 1)
+			i++
+
+			fmt.Printf("node %d → ACK heartbeat %d (resp %.1f s, avg %.1f s)\n",
+				id, j, estimate_time, average_response_time)
+
+			// heartbeat suivant
+			j++
+			start = time.Now()
+			Heartbeat_Sent <- j
+		}
+	}
+}`}
         </CodeBlock>
 
         <h2 className="text-2xl font-semibold text-gray-800">
@@ -573,7 +580,7 @@ func failure_detector(id int, Heartbeat_Sent chan int, ACK_Received chan int) {
         />
 
         <CodeBlock
-          endpoint={`https://go-backend-531057961347.europe-west1.run.app/lab4?fn=q9`}
+          endpoint={`https://go-backend-531057961347.europe-west1.run.app/lab4?fn=q9&cnt=${count9}`}
           log={log9}
           setLog={setLog9}
           running={running9}
@@ -666,6 +673,21 @@ func main() {
     time.Sleep(10 * time.Second)
 }`}
         </CodeBlock>
+
+        <h1 className="text-gray-800 justify-center flex items-center gap-3">
+          <p className="text-gray-800">Timeout: </p>
+
+          <input
+            type="number"
+            value={count9}
+            onChange={(e) => setCount9(Number(e.target.value))}
+            max={10}
+            min={1}
+            step={1}
+            className="border border-gray-300 rounded px-2 py-1 w-20 text-black"
+          />
+          <p className="text-gray-800">secondes</p>
+        </h1>
 
         <h2 className="text-2xl font-semibold text-gray-800">
           Question 10 — Average version

@@ -1,0 +1,53 @@
+graph G {
+  layout=neato;
+  overlap=false;
+  splines=true;
+  size="15,8";
+  ratio=fill;
+  nodesep=0.5;
+  ranksep=0.5;
+
+  node [
+    shape=circle,
+    style=filled,
+    fillcolor=lightcoral,
+    color=darkred,
+    fontcolor=black,
+    fontsize=30,
+    fontname="Helvetica-Bold",
+    width=1.5,
+    height=1.5,
+    fixedsize=true
+  ];
+
+  edge [
+    color=dimgray,
+    penwidth=2
+  ];
+
+  // ---- 3-regular topology for 6 nodes ----
+  // Simple symmetric 3-regular: each node connected to
+  // i+1, i-1, i+3 (mod 6)
+
+  1 -- 2;
+  1 -- 6;
+  1 -- 4;
+
+  2 -- 3;
+  2 -- 5;
+
+  3 -- 4;
+  3 -- 6;
+
+  4 -- 5;
+
+  5 -- 6;
+
+  // Labels
+  1 [label="1"];
+  2 [label="2"];
+  3 [label="3"];
+  4 [label="4"];
+  5 [label="5"];
+  6 [label="6"];
+}

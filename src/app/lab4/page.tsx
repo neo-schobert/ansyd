@@ -5,6 +5,7 @@ import { ArchitectureQ2_1 } from "@/components/ArchitectureQ2_1";
 import { ArchitectureQ2_2 } from "@/components/ArchitectureQ2_2";
 import ArchitectureQ3 from "@/components/ArchitectureQ3";
 import { CodeBlock } from "@/components/CodeBlock";
+import { SchemaBlock } from "@/components/SchemaBlock";
 import { TextBlock } from "@/components/TextBlock";
 import { useState } from "react";
 
@@ -17,6 +18,7 @@ const Lab4Page = () => {
   const [log6, setLog6] = useState("");
   const [log7, setLog7] = useState("");
   const [log8, setLog8] = useState("");
+  const [log9, setLog9] = useState("");
   const [running1, setRunning1] = useState(false);
   const [running2, setRunning2] = useState(false);
   const [running3, setRunning3] = useState(false);
@@ -25,6 +27,7 @@ const Lab4Page = () => {
   const [running6, setRunning6] = useState(false);
   const [running7, setRunning7] = useState(false);
   const [running8, setRunning8] = useState(false);
+  const [running9, setRunning9] = useState(false);
   const [count, setCount] = useState(2);
 
   return (
@@ -532,6 +535,141 @@ func failure_detector(id int, Heartbeat_Sent chan int, ACK_Received chan int) {
 }
   `}
         </CodeBlock>
+
+        <h2 className="text-2xl font-semibold text-gray-800">
+          Question 8 — Analyse
+        </h2>
+
+        <TextBlock>
+          Le code construit un petit réseau où chaque paire de nodes communique
+          via un ensemble complet de canaux : jobs, heartbeats et ACKs, dans les
+          deux directions. Pour chaque relation (i → j), une structure
+          Communications est créée avec tous les canaux nécessaires, puis deux
+          routines Node sont lancées : une pour i vers j, et une pour j vers i.
+          Chaque Node active quatre modules : l’envoi de jobs, la gestion des
+          jobs reçus, le failure detector pour suivre les temps de réponse, et
+          la réponse aux heartbeats entrants. Comme un node peut parler à
+          plusieurs voisins, ces modules sont instanciés une fois par voisin. La
+          topologie utilisée correspond à une boucle entre trois nodes : 1 → 2,
+          2 → 3, 3 → 1. Chaque lien possède ses canaux propres dans les deux
+          sens, formant un anneau où chaque node observe son suivant et lui
+          envoie jobs et heartbeats en continu.
+        </TextBlock>
+
+        <SchemaBlock
+          title="Topologie utilisée dans le code"
+          imageSrc="/lab4/topologie.png"
+          alt="Topologie utilisée dans le code"
+        />
+
+        <h2 className="text-2xl font-semibold text-gray-800">
+          Question 9 — 3-regular Graph
+        </h2>
+
+        <SchemaBlock
+          title="Topologie du 3-regular Graph"
+          imageSrc="/lab4/topologie2.png"
+          alt="Topologie du 3-regular Graph"
+        />
+
+        <CodeBlock
+          endpoint={`https://go-backend-531057961347.europe-west1.run.app/lab4?fn=q9`}
+          log={log9}
+          setLog={setLog9}
+          running={running9}
+          setRunning={setRunning9}
+        >
+          {`package main
+
+import (
+    "time"
+    "fmt"
+)
+
+type Communications struct {
+    Jobs_ij           chan int
+    Jobs_ji           chan int
+    Heartbeat_ij      chan int
+    Heartbeat_ji      chan int
+    HeartbeatReply_ij chan int
+    HeartbeatReply_ji chan int
+}
+
+func Node(id int, Interarrival_time int,
+    Jobs_Sent chan int, Jobs_Received chan int,
+    Heartbeat_Sent chan int, ACK_Received chan int,
+    Heartbeat_Received chan int, ACK_Sent chan int) {
+
+    go sending_job(id, Interarrival_time, Jobs_Sent)
+    go handling_jobs(id, Jobs_Received)
+    go failure_detector(id, Heartbeat_Sent, ACK_Received)
+    go answering_heartbeat(id, Heartbeat_Received, ACK_Sent)
+}
+
+func main() {
+
+    var listCommunications []Communications
+
+    // ---- Edges for the 3-regular 6-node graph ----
+    edges_i := []int{
+        1, 1, 1,
+        2, 2,
+        3, 3,
+        4,
+        5,
+    }
+
+    edges_j := []int{
+        2, 6, 4,
+        3, 5,
+        4, 6,
+        5,
+        6,
+    }
+
+    for k := range edges_i {
+
+        i := edges_i[k]
+        j := edges_j[k]
+
+        var C Communications
+
+        C.Jobs_ij = make(chan int, 5)
+        C.Jobs_ji = make(chan int, 5)
+
+        C.Heartbeat_ij = make(chan int, 5)
+        C.Heartbeat_ji = make(chan int, 5)
+
+        C.HeartbeatReply_ij = make(chan int, 5)
+        C.HeartbeatReply_ji = make(chan int, 5)
+
+        listCommunications = append(listCommunications, C)
+
+        // i → j
+        go Node(
+            i, 1,
+            C.Jobs_ij, C.Jobs_ji,
+            C.Heartbeat_ij, C.HeartbeatReply_ji,
+            C.Heartbeat_ji, C.HeartbeatReply_ij,
+        )
+
+        // j → i
+        go Node(
+            j, 1,
+            C.Jobs_ji, C.Jobs_ij,
+            C.Heartbeat_ji, C.HeartbeatReply_ij,
+            C.Heartbeat_ij, C.HeartbeatReply_ji,
+        )
+    }
+
+    fmt.Println("3-regular network of 6 nodes running...")
+    time.Sleep(10 * time.Second)
+}`}
+        </CodeBlock>
+
+        <h2 className="text-2xl font-semibold text-gray-800">
+          Question 10 — Average version
+        </h2>
       </div>
     </div>
   );

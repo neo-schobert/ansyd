@@ -19,6 +19,8 @@ const Lab4Page = () => {
   const [log7, setLog7] = useState("");
   const [log8, setLog8] = useState("");
   const [log9, setLog9] = useState("");
+  const [log10, setLog10] = useState("");
+  const [log11, setLog11] = useState("");
   const [running1, setRunning1] = useState(false);
   const [running2, setRunning2] = useState(false);
   const [running3, setRunning3] = useState(false);
@@ -28,8 +30,11 @@ const Lab4Page = () => {
   const [running7, setRunning7] = useState(false);
   const [running8, setRunning8] = useState(false);
   const [running9, setRunning9] = useState(false);
+  const [running10, setRunning10] = useState(false);
+  const [running11, setRunning11] = useState(false);
   const [count, setCount] = useState(2);
   const [count9, setCount9] = useState(2);
+  const [count10, setCount10] = useState(2);
 
   return (
     <div className="min-h-screen bg-linear-to-b from-gray-50 via-gray-100 to-gray-50 p-6 pt-40">
@@ -460,7 +465,7 @@ func answering_heartbeat(id int, Heartbeat_Received chan int, ACK_Sent chan int)
 
 		// Réponse
 		ACK_Sent <- hb
-		fmt.Printf("node %d → ACK heartbeat %d\n", id, hb)
+		fmt.Printf("node %d → ACK heartbeat %d\\n", id, hb)
 	}
 }`}
         </CodeBlock>
@@ -475,6 +480,14 @@ func answering_heartbeat(id int, Heartbeat_Received chan int, ACK_Sent chan int)
           n’arrive avant l’expiration, on considère que le voisin est trop lent
           ou en faute. À chaque réponse, ou absence de réponse, le node mesure
           le temps, met à jour sa moyenne, puis envoie le heartbeat suivant.
+        </TextBlock>
+
+        <TextBlock>
+          Après avoir fait la suite, j&apos;ai réalisé que l&apos;unité de temps
+          n&apos;était pas cohérente avec le reste du code. J&apos;ai donc
+          modifié le code pour que les temps soient en secondes, comme dans les
+          autres fonctions. Le temps de timeout est réglable en fin de question
+          9.
         </TextBlock>
 
         <CodeBlock
@@ -503,7 +516,7 @@ func failure_detector(id int, Heartbeat_Sent chan int, ACK_Received chan int) {
 			elapsed := float64(time.Since(start).Milliseconds())
 			estimate_time = elapsed
 
-			fmt.Printf("node %d → timeout on heartbeat %d (est %.1f ms, avg %.1f ms)\n",
+			fmt.Printf("node %d → timeout on heartbeat %d (est %.1f ms, avg %.1f ms)\\n",
 				id, j, estimate_time, average_response_time)
 
 			return
@@ -517,9 +530,7 @@ func failure_detector(id int, Heartbeat_Sent chan int, ACK_Received chan int) {
 
 			// Vérifier que l'ACK correspond bien au heartbeat courant.
 			if ack != j {
-				// ACK pour un ancien heartbeat => on l'ignore (log optionnel)
-				fmt.Printf("node %d → received stale ACK %d (expect %d), ignoring\n", id, ack, j)
-				// on continue d'attendre le bon ack, timer reste en place
+				fmt.Printf("node %d → received stale ACK %d (expect %d), ignoring\\n", id, ack, j)
 				continue
 			}
 
@@ -531,7 +542,7 @@ func failure_detector(id int, Heartbeat_Sent chan int, ACK_Received chan int) {
 			average_response_time = (average_response_time*i + estimate_time) / (i + 1)
 			i++
 
-			fmt.Printf("node %d → ACK heartbeat %d (resp %.1f s, avg %.1f s)\n",
+			fmt.Printf("node %d → ACK heartbeat %d (resp %.1f s, avg %.1f s)\\n",
 				id, j, estimate_time, average_response_time)
 
 			// heartbeat suivant
@@ -578,6 +589,19 @@ func failure_detector(id int, Heartbeat_Sent chan int, ACK_Received chan int) {
           imageSrc="/lab4/topologie2.png"
           alt="Topologie du 3-regular Graph"
         />
+
+        <TextBlock>
+          Le code crée un réseau 3-régulier de 6 nœuds en définissant des arêtes
+          spécifiques entre eux. Pour chaque arête entre les nœuds i et j, une
+          structure Communications est initialisée avec des canaux pour les
+          jobs, les heartbeats et les réponses dans les deux directions. Deux
+          routines Node sont lancées pour chaque paire i-j : une pour i vers j
+          et une pour j vers i. Chaque Node active les modules d’envoi de jobs,
+          de gestion des jobs reçus, de détection de pannes et de réponse aux
+          heartbeats. Ainsi, chaque nœud communique avec trois autres nœuds via
+          des canaux dédiés, formant un réseau 3-régulier où chaque nœud a
+          exactement trois connexions.
+        </TextBlock>
 
         <CodeBlock
           endpoint={`https://go-backend-531057961347.europe-west1.run.app/lab4?fn=q9&cnt=${count9}`}
@@ -692,6 +716,309 @@ func main() {
         <h2 className="text-2xl font-semibold text-gray-800">
           Question 10 — Average version
         </h2>
+
+        <TextBlock>
+          On commence par créer la structure message. On doit simplement définir
+          un nouveau type de message avg_list qui contiendra un snapshot des
+          moyennes locales de chaque node. Ensuite, on modifie la structure
+          Communications pour y inclure les canaux de JobMessage au lieu des
+          canaux d&apos;int. Le reste de l&apos;implémentation suivra dans la
+          suite du lab.
+        </TextBlock>
+
+        <CodeBlock
+          log={log10}
+          setLog={setLog10}
+          running={running10}
+          setRunning={setRunning10}
+        >
+          {`type JobMessage struct {
+	Type    string    // "job" ou "avg_list"
+	JobID   int       // id du job si Type == "job"
+	Sender  int       // id du node émetteur
+	AllAvgs []float64 // snapshot des moyennes (Type == "avg_list")
+}
+
+type Communications struct {
+	Jobs_ij           chan JobMessage
+	Jobs_ji           chan JobMessage
+	Heartbeat_ij      chan int
+	Heartbeat_ji      chan int
+	HeartbeatReply_ij chan int
+	HeartbeatReply_ji chan int
+}`}
+        </CodeBlock>
+
+        <TextBlock>
+          On doit alors modifier les différentes routines pour qu&apos;elles
+          utilisent le nouveau type de message. Le failure detector doit
+          maintenant publier des snapshots de la table des moyennes locales
+          lorsqu&apos;il reçoit un ACK. Le sending_job doit aussi être modifié
+          pour qu&apos;il puisse envoyer ces snapshots aux voisins. Enfin, le
+          handling_jobs doit être mis à jour pour qu&apos;il puisse traiter les
+          messages de type avg_list et mettre à jour la table des moyennes
+          locales en conséquence.
+        </TextBlock>
+
+        <CodeBlock
+          endpoint={`https://go-backend-531057961347.europe-west1.run.app/lab4?fn=q10&cnt=${count10}`}
+          log={log11}
+          setLog={setLog11}
+          running={running11}
+          setRunning={setRunning11}
+        >
+          {`func failure_detector(id int, Heartbeat_Sent chan int, ACK_Received chan int, avgListChan chan<- []float64, allAverages *[]float64, muAvg *sync.Mutex) {
+	var j int = 1
+	var average_response_time float64 = 1.0
+	var i float64 = 1.0
+
+	// envoie premier heartbeat
+	start := time.Now()
+	Heartbeat_Sent <- j
+
+	for {
+		select {
+		case <-time.After(${count} * time.Second):
+			// timeout -> pas d'ACK à temps
+			elapsed := float64(time.Since(start).Seconds())
+
+			fmt.Printf("node %d → timeout on heartbeat %d (est %.3f s, local avg %.3f s)\\n",
+				id, j, elapsed, average_response_time)
+			return
+
+		case ack, ok := <-ACK_Received:
+			if !ok {
+				return
+			}
+
+			if ack != j {
+				fmt.Printf("node %d → received stale ACK %d (expect %d), ignoring\\n", id, ack, j)
+				continue
+			}
+
+			// RTT pour ce heartbeat en secondes
+			elapsed := float64(time.Since(start).Seconds())
+
+			// mise à jour moyenne locale (exponential average simple via count i)
+			average_response_time = (average_response_time*i + elapsed) / (i + 1)
+			i++
+
+			// met à jour la vue locale (sa propre entrée)
+			muAvg.Lock()
+			if id >= 0 && id < len(*allAverages) {
+				(*allAverages)[id] = average_response_time
+			}
+			// préparer un snapshot (copie) de la table locale
+			snapshot := make([]float64, len(*allAverages))
+			copy(snapshot, *allAverages)
+			muAvg.Unlock()
+
+			// publier le snapshot NON BLOQUANT pour que sending_job l'envoie aux voisins
+			select {
+			case avgListChan <- snapshot:
+				// envoyé
+			default:
+				// buffer plein -> drop (on ne bloque pas)
+			}
+
+			// calculer moyenne globale à partir de la vue locale
+			muAvg.Lock()
+			sum := 0.0
+			cnt := 0
+			for idx, v := range *allAverages {
+				if idx == 0 {
+					continue
+				}
+				if v > 0 {
+					sum += v
+					cnt++
+				}
+			}
+			muAvg.Unlock()
+
+			globalAvg := 0.0
+			if cnt > 0 {
+				globalAvg = sum / float64(cnt)
+			}
+
+			fmt.Printf("node %d → ACK heartbeat %d (rtt %.3f s, local avg %.3f s, global avg %.3f s)\\n",
+				id, j, elapsed, average_response_time, globalAvg)
+
+			// next heartbeat
+			j++
+			start = time.Now()
+			Heartbeat_Sent <- j
+		}
+	}
+}
+
+func answering_heartbeat(id int, Heartbeat_Received chan int, ACK_Sent chan int) {
+	for {
+		hb, ok := <-Heartbeat_Received
+		if !ok {
+			return
+		}
+		// simule une petite latence proportionnelle à id
+		time.Sleep(time.Duration(id) * time.Second)
+		ACK_Sent <- hb
+		fmt.Printf("node %d → ACK heartbeat %d\\n", id, hb)
+	}
+}
+
+func sending_job(id int, interarrival_time int, Jobs_Sent chan JobMessage, avgListSource <-chan []float64) {
+	jobID := 1
+	for {
+		// envoyer job courant
+		Jobs_Sent <- JobMessage{Type: "job", JobID: jobID, Sender: id}
+		fmt.Printf("node %d → sent job %d\\n", id, jobID)
+		jobID++
+
+		// si un snapshot est disponible, l'envoyer aux voisins
+		select {
+		case snapshot := <-avgListSource:
+			// envoyer la liste complète
+			Jobs_Sent <- JobMessage{Type: "avg_list", Sender: id, AllAvgs: snapshot}
+			fmt.Printf("node %d → sent avg_list (len=%d)\\n", id, len(snapshot))
+		default:
+			// rien à envoyer pour les avgs cette ronde
+		}
+
+		time.Sleep(time.Duration(interarrival_time) * time.Second)
+	}
+}
+
+func handling_jobs(id int, Jobs_Received chan JobMessage, allAverages *[]float64, muAvg *sync.Mutex) {
+	for msg := range Jobs_Received {
+		switch msg.Type {
+		case "job":
+			fmt.Printf("node %d → received job %d from %d (processed)\\n", id, msg.JobID, msg.Sender)
+		case "avg_list":
+			recv := msg.AllAvgs
+			// guarder la longueur minimale
+			muAvg.Lock()
+			if len(recv) > 0 {
+				for idx := 1; idx <= 6 && idx < len(*allAverages) && idx < len(recv); idx++ {
+					rv := recv[idx]
+					if rv > 0 {
+						local := (*allAverages)[idx]
+						if local > 0 {
+							(*allAverages)[idx] = (local + rv) / 2.0
+						} else {
+							(*allAverages)[idx] = rv
+						}
+					}
+				}
+			}
+			muAvg.Unlock()
+
+			fmt.Printf("node %d → received avg_list from %d and merged\\n", id, msg.Sender)
+
+		default:
+			fmt.Printf("node %d → received unknown job type '%s'\\n", id, msg.Type)
+		}
+	}
+}
+
+func NodeLab4(id int, Interarrival_time int,
+	Jobs_Sent chan JobMessage, Jobs_Received chan JobMessage,
+	Heartbeat_Sent chan int, ACK_Received chan int,
+	Heartbeat_Received chan int, ACK_Sent chan int) {
+
+	// vue locale des moyennes : indices 0..NNodes (on ignore 0)
+	localAverages := make([]float64, 6+1)
+	muAvg := &sync.Mutex{}
+
+	// canal local pour publier snapshots de la table locale (bidirectionnel côté créateur)
+	avgListChan := make(chan []float64, 5)
+
+	// Lancer sous-modules
+	go sending_job(id, Interarrival_time, Jobs_Sent, avgListChan) // lit avgListChan
+	go handling_jobs(id, Jobs_Received, &localAverages, muAvg)
+	go failure_detector(id, Heartbeat_Sent, ACK_Received, avgListChan, &localAverages, muAvg)
+	go answering_heartbeat(id, Heartbeat_Received, ACK_Sent)
+}
+
+// ---------------------- Topologie & lancement ----------------------
+func Q10_Lab4() {
+	var listCommunications []CommunicationsQ10
+	out := ""
+
+	// edges for a 3-regular 6-node graph (same as before)
+	edges_i := []int{
+		1, 1, 1,
+		2, 2,
+		3, 3,
+		4,
+		5,
+	}
+	edges_j := []int{
+		2, 6, 4,
+		3, 5,
+		4, 6,
+		5,
+		6,
+	}
+
+	for k := range edges_i {
+		i := edges_i[k]
+		j := edges_j[k]
+
+		var C CommunicationsQ10
+		C.Jobs_ij = make(chan JobMessage, 10)
+		C.Jobs_ji = make(chan JobMessage, 10)
+
+		C.Heartbeat_ij = make(chan int, 10)
+		C.Heartbeat_ji = make(chan int, 10)
+
+		C.HeartbeatReply_ij = make(chan int, 10)
+		C.HeartbeatReply_ji = make(chan int, 10)
+
+		listCommunications = append(listCommunications, C)
+
+		// i -> j
+		go NodeLab4(
+			i, 2,
+			C.Jobs_ij, C.Jobs_ji,
+			C.Heartbeat_ij, C.HeartbeatReply_ji,
+			C.Heartbeat_ji, C.HeartbeatReply_ij,
+			&out,
+			count,
+		)
+
+		// j -> i
+		go NodeLab4(
+			j, 2,
+			C.Jobs_ji, C.Jobs_ij,
+			C.Heartbeat_ji, C.HeartbeatReply_ij,
+			C.Heartbeat_ij, C.HeartbeatReply_ji,
+			&out,
+			count,
+		)
+	}
+
+  fmt.Printf("Q10: 3-regular network of 6 nodes running (avg_list exchange)...\\n")
+
+	// laisser tourner un peu pour accumuler logs
+	time.Sleep(12 * time.Second)
+
+}
+`}
+        </CodeBlock>
+
+        <h1 className="text-gray-800 justify-center flex items-center gap-3">
+          <p className="text-gray-800">Timeout: </p>
+
+          <input
+            type="number"
+            value={count10}
+            onChange={(e) => setCount10(Number(e.target.value))}
+            max={10}
+            min={1}
+            step={1}
+            className="border border-gray-300 rounded px-2 py-1 w-20 text-black"
+          />
+          <p className="text-gray-800">secondes</p>
+        </h1>
       </div>
     </div>
   );

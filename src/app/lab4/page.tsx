@@ -16,6 +16,7 @@ const Lab4Page = () => {
   const [log5, setLog5] = useState("");
   const [log6, setLog6] = useState("");
   const [log7, setLog7] = useState("");
+  const [log8, setLog8] = useState("");
   const [running1, setRunning1] = useState(false);
   const [running2, setRunning2] = useState(false);
   const [running3, setRunning3] = useState(false);
@@ -23,6 +24,7 @@ const Lab4Page = () => {
   const [running5, setRunning5] = useState(false);
   const [running6, setRunning6] = useState(false);
   const [running7, setRunning7] = useState(false);
+  const [running8, setRunning8] = useState(false);
   const [count, setCount] = useState(2);
 
   return (
@@ -458,6 +460,77 @@ func answering_heartbeat(id int, Heartbeat_Received chan int, ACK_Sent chan int)
 	}
 }
 `}
+        </CodeBlock>
+
+        <h2 className="text-2xl font-semibold text-gray-800">
+          Question 7 — Failure Detection
+        </h2>
+
+        <TextBlock>
+          Le failure detector envoie un heartbeat et attend l’ACK. Le{" "}
+          <code>case &lt;-time.After(100)</code> sert de limite : si aucun ACK
+          n’arrive avant l’expiration, on considère que le voisin est trop lent
+          ou en faute. À chaque réponse, ou absence de réponse, le node mesure
+          le temps, met à jour sa moyenne, puis envoie le heartbeat suivant.
+        </TextBlock>
+
+        <CodeBlock
+          log={log8}
+          setLog={setLog8}
+          running={running8}
+          setRunning={setRunning8}
+        >
+          {`
+func failure_detector(id int, Heartbeat_Sent chan int, ACK_Received chan int) {
+    var j int = 1
+    var estimate_time float64 = 1
+    var average_response_time float64 = 1
+    var i float64 = 1
+
+    // premier heartbeat envoyé
+    start := time.Now()
+    Heartbeat_Sent <- j
+
+    for {
+        select {
+
+        case <-time.After(100):
+            // timeout -> pas d'ACK à temps
+            elapsed := float64(time.Since(start).Milliseconds())
+            estimate_time = elapsed
+
+            // mise à jour de la moyenne
+            average_response_time = (average_response_time*i + estimate_time) / (i + 1)
+            i++
+
+            fmt.Printf("node %d → timeout on heartbeat %d (est %.1f ms, avg %.1f ms)\\n",
+                id, j, estimate_time, average_response_time)
+
+            // nouveau heartbeat
+            j++
+            start = time.Now()
+            Heartbeat_Sent <- j
+
+        case <-ACK_Received:
+            // ACK reçu -> réponse OK
+            elapsed := float64(time.Since(start).Milliseconds())
+            estimate_time = elapsed
+
+            // mise à jour moyenne
+            average_response_time = (average_response_time*i + estimate_time) / (i + 1)
+            i++
+
+            fmt.Printf("node %d → ACK heartbeat %d (resp %.1f ms, avg %.1f ms)\\n",
+                id, j, estimate_time, average_response_time)
+
+            // heartbeat suivant
+            j++
+            start = time.Now()
+            Heartbeat_Sent <- j
+        }
+    }
+}
+  `}
         </CodeBlock>
       </div>
     </div>

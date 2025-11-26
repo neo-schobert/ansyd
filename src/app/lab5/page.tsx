@@ -10,12 +10,19 @@ import { InlineMath, BlockMath } from "react-katex";
 
 const Lab5Page = () => {
   const [log1, setLog1] = useState("");
+  const [log2, setLog2] = useState("");
   const [running1, setRunning1] = useState(false);
+  const [running2, setRunning2] = useState(false);
   const [beta, setBeta] = useState(0.2);
+  const [beta2, setBeta2] = useState(0.2);
   const [l, setL] = useState(3);
+  const [l2, setL2] = useState(3);
   const [v, setV] = useState(5);
+  const [v2, setV2] = useState(5);
   const [nodeCount, setNodeCount] = useState(5);
+  const [nodeCount2, setNodeCount2] = useState(5);
   const [byzantineProp, setByzantineProp] = useState(0.2);
+  const [byzantineProp2, setByzantineProp2] = useState(0.2);
 
   return (
     <div className="min-h-screen bg-linear-to-b from-gray-50 via-gray-100 to-gray-50 p-6 pt-40">
@@ -69,12 +76,12 @@ const Lab5Page = () => {
           Finalement,
           <BlockMath
             math={String.raw`
-    P(X_{k+1} = m' \mid X_k = m)
+    P(X_{k+1} = m&apos; \mid X_k = m)
     =
     \begin{cases}
-      3p^2 - 5p^3 + 2p^4, & \text{si } m' = m+1, \\
-      1 - 3p + 5p^2 - p^3, & \text{si } m' = m, \\
-      3p - 8p^2 + 6p^3 - 2p^4, & \text{si } m' = m-1, \\
+      3p^2 - 5p^3 + 2p^4, & \text{si } m&apos; = m+1, \\
+      1 - 3p + 5p^2 - p^3, & \text{si } m&apos; = m, \\
+      3p - 8p^2 + 6p^3 - 2p^4, & \text{si } m&apos; = m-1, \\
       0 & \text{sinon.}
     \end{cases}
   `}
@@ -83,12 +90,12 @@ const Lab5Page = () => {
           <InlineMath math="\frac{m}{n}" />, on obtient le résultat:
           <BlockMath
             math={String.raw`
-    P(X_{k+1} = m' \mid X_k = m)
+    P(X_{k+1} = m&apos; \mid X_k = m)
     =
     \begin{cases}
-      3\left(\frac{m}{n}\right)^2 - 5\left(\frac{m}{n}\right)^3 + 2\left(\frac{m}{n}\right)^4, & \text{si } m' = m+1, \\
-      1 - 3\left(\frac{m}{n}\right) + 5\left(\frac{m}{n}\right)^2 - \left(\frac{m}{n}\right)^3, & \text{si } m' = m, \\
-      3\left(\frac{m}{n}\right) - 8\left(\frac{m}{n}\right)^2 + 6\left(\frac{m}{n}\right)^3 - 2\left(\frac{m}{n}\right)^4, & \text{si } m' = m-1, \\
+      3\left(\frac{m}{n}\right)^2 - 5\left(\frac{m}{n}\right)^3 + 2\left(\frac{m}{n}\right)^4, & \text{si } m&apos; = m+1, \\
+      1 - 3\left(\frac{m}{n}\right) + 5\left(\frac{m}{n}\right)^2 - \left(\frac{m}{n}\right)^3, & \text{si } m&apos; = m, \\
+      3\left(\frac{m}{n}\right) - 8\left(\frac{m}{n}\right)^2 + 6\left(\frac{m}{n}\right)^3 - 2\left(\frac{m}{n}\right)^4, & \text{si } m&apos; = m-1, \\
       0 & \text{sinon.}
     \end{cases}
   `}
@@ -249,12 +256,12 @@ const Lab5Page = () => {
           Finalement,
           <BlockMath
             math={String.raw`
-    P(\overline{X}_{k+1} = m' \mid X_k = m)
+    P(\overline{X}_{k+1} = m&apos; \mid X_k = m)
     =
     \begin{cases}
-      (1-s)(s(1-q)^2(q(1-s)^2 +s) + (1-s)q^2), & \text{si } m' = m+1, \\
-      1 - (1-q)^2 \, s \, (1-s) \left[ 1 + q \left( s^2 + (1-s)^2 \right) \right] - q^2 \left( s^2 + (1-s)^2 \right), & \text{si } m' = m, \\
-      s((1-s)(1-q)^2(qs^2 + (1-s)) + sq^2), & \text{si } m' = m-1, \\
+      (1-s)(s(1-q)^2(q(1-s)^2 +s) + (1-s)q^2), & \text{si } m&apos; = m+1, \\
+      1 - (1-q)^2 \, s \, (1-s) \left[ 1 + q \left( s^2 + (1-s)^2 \right) \right] - q^2 \left( s^2 + (1-s)^2 \right), & \text{si } m&apos; = m, \\
+      s((1-s)(1-q)^2(qs^2 + (1-s)) + sq^2), & \text{si } m&apos; = m-1, \\
       0 & \text{sinon.}
     \end{cases}
   `}
@@ -264,12 +271,12 @@ const Lab5Page = () => {
           résultat:
           <BlockMath
             math={String.raw`
-    P(\overline{X}_{k+1} = m' \mid X_k = m)
+    P(\overline{X}_{k+1} = m&apos; \mid X_k = m)
     =
     \begin{cases}
-      (1-\frac{m}{(1-q)n})(\frac{m}{(1-q)n}(1-q)^2(q(1-\frac{m}{(1-q)n})^2 +\frac{m}{(1-q)n}) + (1-\frac{m}{(1-q)n})q^2), & \text{si } m' = m+1, \\
-      1 - (1-q)^2 \, \frac{m}{(1-q)n} \, (1-\frac{m}{(1-q)n}) \left[ 1 + q \left( (\frac{m}{(1-q)n})^2 + (1-\frac{m}{(1-q)n})^2 \right) \right] - q^2 \left( (\frac{m}{(1-q)n})^2 + (1-\frac{m}{(1-q)n})^2 \right), & \text{si } m' = m, \\
-      \frac{m}{(1-q)n}((1-\frac{m}{(1-q)n})(1-q)^2(q(\frac{m}{(1-q)n})^2 + (1-\frac{m}{(1-q)n})) + \frac{m}{(1-q)n}q^2), & \text{si } m' = m-1, \\
+      (1-\frac{m}{(1-q)n})(\frac{m}{(1-q)n}(1-q)^2(q(1-\frac{m}{(1-q)n})^2 +\frac{m}{(1-q)n}) + (1-\frac{m}{(1-q)n})q^2), & \text{si } m&apos; = m+1, \\
+      1 - (1-q)^2 \, \frac{m}{(1-q)n} \, (1-\frac{m}{(1-q)n}) \left[ 1 + q \left( (\frac{m}{(1-q)n})^2 + (1-\frac{m}{(1-q)n})^2 \right) \right] - q^2 \left( (\frac{m}{(1-q)n})^2 + (1-\frac{m}{(1-q)n})^2 \right), & \text{si } m&apos; = m, \\
+      \frac{m}{(1-q)n}((1-\frac{m}{(1-q)n})(1-q)^2(q(\frac{m}{(1-q)n})^2 + (1-\frac{m}{(1-q)n})) + \frac{m}{(1-q)n}q^2), & \text{si } m&apos; = m-1, \\
       0 & \text{sinon.}
     \end{cases}
   `}
@@ -319,6 +326,14 @@ type Node struct {
 	byzantine bool
 }
 
+const (
+  b    = ${beta}
+  v    = ${v}
+  l    = ${l}
+  n    = ${nodeCount}
+  q    = ${byzantineProp}
+)
+
 func helpWeakest(nodes []Node) int {
 	zeros, ones := 0, 0
 	for _, nd := range nodes {
@@ -335,14 +350,6 @@ func helpWeakest(nodes []Node) int {
 	}
 	return 1
 }
-
-const (
-  b    = ${beta}
-  v    = ${v}
-  l    = ${l}
-  n    = ${nodeCount}
-  q    = ${byzantineProp}
-)
 
 func main()  {
 	rand.Seed(time.Now().UnixNano())
@@ -375,7 +382,7 @@ func main()  {
 	for {
 		select {
 		case <-ctx.Done():
-			return "TimeOut sur l'execution, vous devriez modifier les paramètres d'entrée"
+			return "TimeOut sur l&apos;execution, vous devriez modifier les paramètres d&apos;entrée"
 		default:
 			// Continue execution
 		}
@@ -572,6 +579,432 @@ func main()  {
         <h3 className="text-xl font-semibold text-gray-700">
           Question 7 — Adversary
         </h3>
+
+        <TextBlock>
+          Dans l&apos;article, on nous parle de 3 types d&apos;adversaires, on
+          a:
+          <ul className="list-disc list-inside mt-2">
+            <li>Cautious adversary</li>
+            <li>Semi-cautious adversary</li>
+            <li>Berserk adversary</li>
+          </ul>
+        </TextBlock>
+
+        <TextBlock>
+          Un adversaire <i>cautious</i> garde une cohérence stricte dans ses
+          réponses : il envoie la même opinion à tous les nœuds et ne produit
+          jamais de messages contradictoires. Son avantage principal est d’être
+          difficile à distinguer d’un nœud honnête, puisqu’il ne crée aucune
+          incohérence observable. En revanche, sa capacité d’influence est
+          limitée : en restant cohérent, il ne peut pas manipuler différemment
+          des sous-groupes du réseau et ne peut que biaiser globalement les
+          estimations.
+        </TextBlock>
+
+        <TextBlock>
+          Un adversaire <i>semi-cautious</i> peut adapter son opinion selon les
+          destinataires, mais il conserve une forme de cohérence : il ne renvoie
+          pas d’informations ouvertement contradictoires dans un même round. Ce
+          comportement lui donne plus de flexibilité pour influencer certaines
+          parties du réseau tout en minimisant le risque d’être immédiatement
+          détecté. Toutefois, le fait de varier ses réponses accroît la
+          probabilité que des nœuds identifient des divergences et repèrent son
+          rôle adversarial.
+        </TextBlock>
+
+        <TextBlock>
+          Un adversaire <i>berserk</i> peut répondre de manière totalement
+          incohérente, en envoyant des opinions différentes et contradictoires à
+          chaque requête. Cette liberté lui confère la force d’attaquer finement
+          le protocole : il peut provoquer des désaccords locaux, ralentir ou
+          perturber la convergence, et manipuler individuellement chaque nœud.
+          En contrepartie, ce comportement est très facile à détecter : les
+          contradictions qu’il génère sont visibles dès que les nœuds comparent
+          les messages reçus, ce qui limite l’efficacité durable de cette
+          stratégie.
+        </TextBlock>
+
+        <TextBlock>
+          A ce titre, la stratégie Help the weakest est une stratégie cautious.
+          Elle est difficilement détectable mais son influence est limitée,
+          comme on le voit dans les simulations.
+        </TextBlock>
+
+        <h3 className="text-xl font-semibold text-gray-700">
+          BONUS — Détection des nœuds byzantins
+        </h3>
+
+        <TextBlock>
+          Cette partie traitera d&apos;une petite implémentation d&apos;un
+          mécanisme de détection des nœuds byzantins dans le contexte de
+          l&apos;algorithme de consensus probabiliste rapide. L&apos;objectif
+          est d&apos;identifier les nœuds malveillants qui tentent de perturber
+          le processus de consensus. Sans savoir bien sûr à l&apos;avance quelle
+          stratégie est utilisée par l&apos;adversaire et quels nœuds sont
+          byzantins. L&apos;algorithme vient s&apos;ajouter à l&apos;algorithme
+          principal décrit précédemment. et ajoute un log DETECTION à chaque
+          itération.
+        </TextBlock>
+
+        <CodeBlock
+          endpoint={`https://go-backend-531057961347.europe-west1.run.app/lab5?fn=q8&bprop=${byzantineProp}&cnt=${nodeCount}&beta=${beta}&v=${v}&l=${l}`}
+          log={log2}
+          setLog={setLog2}
+          running={running2}
+          setRunning={setRunning2}
+        >
+          {`package main
+
+import (
+	"context"
+	"fmt"
+	"math/rand"
+	"sync"
+	"time"
+)
+  
+type Node struct {
+	id        int
+	opinion   int
+	stable    int
+	byzantine bool
+}
+
+type RoundSnapshot struct {
+	Opinions []int  // opinions de tous les noeuds à la fin du round
+	ByzMask  []bool // quels noeuds sont déjà marqués comme byzantins avant ce round
+	Time     time.Time
+}
+
+const (
+  b    = ${beta2}
+  v    = ${v2}
+  l    = ${l2}
+  n    = ${nodeCount2}
+  q    = ${byzantineProp2}
+)
+
+func helpWeakest(nodes []Node) int {
+	zeros, ones := 0, 0
+	for _, nd := range nodes {
+		if !nd.byzantine {
+			if nd.opinion == 0 {
+				zeros++
+			} else {
+				ones++
+			}
+		}
+	}
+	if zeros <= ones {
+		return 0
+	}
+	return 1
+}
+
+func detectByzantineNodes(history []RoundSnapshot, nodes []Node,
+	minRounds int, wFlip, wDisagree, detectThreshold float64) []int {
+
+	rounds := len(history)
+	n := len(nodes)
+	if rounds < minRounds {
+		return nil // pas assez de données
+	}
+
+	majorities := make([]int, rounds)
+	for r := 0; r < rounds; r++ {
+		cnt1, cnt0 := 0, 0
+		for i := 0; i < n; i++ {
+			if nodes[i].byzantine {
+				continue
+			}
+			if history[r].Opinions[i] == 1 {
+				cnt1++
+			} else {
+				cnt0++
+			}
+		}
+		if cnt1 >= cnt0 {
+			majorities[r] = 1
+		} else {
+			majorities[r] = 0
+		}
+	}
+
+	var suspects []int
+
+	for i := 0; i < n; i++ {
+		if nodes[i].byzantine {
+			continue
+		}
+
+		flips := 0
+		for r := 1; r < rounds; r++ {
+			if history[r].Opinions[i] != history[r-1].Opinions[i] {
+				flips++
+			}
+		}
+		flipRate := float64(flips) / float64(rounds-1)
+
+		disagrees := 0
+		for r := 0; r < rounds; r++ {
+			if history[r].Opinions[i] != majorities[r] {
+				disagrees++
+			}
+		}
+		disagreeRate := float64(disagrees) / float64(rounds)
+
+		score := wFlip*flipRate + wDisagree*disagreeRate
+		if score > detectThreshold {
+			suspects = append(suspects, i)
+		}
+	}
+	return suspects
+}
+
+func main() {
+
+	rand.Seed(time.Now().UnixNano())
+
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	defer cancel()
+
+	nodes := make([]Node, n)
+	history := []RoundSnapshot{}
+
+	// placement byzantins initiaux
+	nByzantine := int(float64(n) * q)
+	if nByzantine > n/2 {
+		nByzantine = n / 2
+	}
+	perm := rand.Perm(n)
+
+	for i := 0; i < n; i++ {
+		nodes[i] = Node{id: i + 1, opinion: rand.Intn(2)}
+	}
+
+	for i := 0; i < nByzantine; i++ {
+		nodes[perm[i]].byzantine = true
+	}
+
+	start := time.Now()
+
+	for {
+		select {
+		case <-ctx.Done():
+			return "TimeOut sur l'execution, vous devriez modifier les paramètres d'entrée"
+		default:
+		}
+
+		allStable := true
+		newOpinions := make([]int, n)
+		var wg sync.WaitGroup
+
+		// --- Computation parallel ---
+		for i := range nodes {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+
+				nd := &nodes[i]
+
+				if nd.byzantine {
+					newOpinions[i] = helpWeakest(nodes)
+					return
+				}
+
+				sum := 0
+				for k := 0; k < l; k++ {
+					target := rand.Intn(n)
+					sum += nodes[target].opinion
+				}
+				eta := float64(sum) / float64(l)
+
+				U := b + rand.Float64()*(1-2*b)
+
+				if eta > U {
+					newOpinions[i] = 1
+				} else if eta < U {
+					newOpinions[i] = 0
+				} else {
+					newOpinions[i] = nd.opinion
+				}
+			}(i)
+		}
+
+		wg.Wait()
+
+		// --- Mise à jour des opinions ---
+		for i := range nodes {
+			if nodes[i].opinion == newOpinions[i] {
+				nodes[i].stable++
+			} else {
+				nodes[i].stable = 0
+			}
+			nodes[i].opinion = newOpinions[i]
+
+			if nodes[i].stable < v {
+				allStable = false
+			}
+		}
+
+		// --- Enregistrement du snapshot ---
+		snap := RoundSnapshot{
+			Opinions: make([]int, n),
+			ByzMask:  make([]bool, n),
+			Time:     time.Now(),
+		}
+
+		// on copie les états **avant** les mises à jour de ce round
+		for i := 0; i < n; i++ {
+			snap.Opinions[i] = nodes[i].opinion
+			snap.ByzMask[i] = nodes[i].byzantine
+		}
+
+		history = append(history, snap)
+
+		// --- Détection byzantine ---
+		suspects := detectByzantineNodes(history, nodes, 6, 0.6, 0.6, 0.7)
+		for _, idx := range suspects {
+			if !nodes[idx].byzantine {
+				nodes[idx].byzantine = true
+				fmt.Printf("DETECTION: Node %d marked as Byzantine\\n", nodes[idx].id)
+			}
+		}
+
+		if allStable {
+			break
+		}
+	}
+
+	elapsed := time.Since(start)
+
+	fmt.Println("\\nFinal opinions:")
+	for _, nd := range nodes {
+		fmt.Printf("Node %d (Byz=%v): %d\\n", nd.id, nd.byzantine, nd.opinion)
+	}
+
+	fmt.Printf("Time elapsed: %v\\n", elapsed)
+
+	// consensus final
+	ref := -1
+	consensus := true
+	for _, nd := range nodes {
+		if nd.byzantine {
+			continue
+		}
+		if ref == -1 {
+			ref = nd.opinion
+		} else if nd.opinion != ref {
+			consensus = false
+		}
+	}
+
+	if consensus {
+		fmt.Println("Honest nodes reached consensus.")
+	} else {
+		fmt.Println("Honest nodes did NOT reach consensus.")
+	}
+}`}
+        </CodeBlock>
+
+        <h1 className="text-gray-800 justify-center flex items-center gap-3">
+          <p className="text-gray-800">q: </p>
+
+          <Slider
+            value={byzantineProp2}
+            step={0.05}
+            min={0}
+            max={0.5}
+            onChange={(_, val) => setByzantineProp2(val as number)}
+            valueLabelDisplay="auto"
+          />
+        </h1>
+        <h1 className="text-gray-800 justify-center flex items-center gap-3">
+          <p className="text-gray-800">n: </p>
+
+          <Slider
+            value={nodeCount2}
+            step={1}
+            min={1}
+            max={50}
+            onChange={(_, val) => {
+              setNodeCount2(val as number);
+              if (l2 > (val as number)) {
+                setL2(val as number);
+              }
+            }}
+            valueLabelDisplay="auto"
+          />
+        </h1>
+
+        <h1 className="text-gray-800 justify-center flex items-center gap-3">
+          <p className="text-gray-800 flex-row flex">
+            <InlineMath math="\ell" />:{"  "}
+          </p>
+
+          <Slider
+            value={l2}
+            step={1}
+            min={1}
+            max={nodeCount2}
+            onChange={(_, val) => setL2(val as number)}
+            valueLabelDisplay="auto"
+          />
+        </h1>
+        <h1 className="text-gray-800 justify-center flex items-center gap-3">
+          <p className="text-gray-800">v: </p>
+
+          <Slider
+            value={v2}
+            step={1}
+            min={1}
+            max={20}
+            onChange={(_, val) => setV2(val as number)}
+            valueLabelDisplay="auto"
+          />
+        </h1>
+        <h1 className="text-gray-800 justify-center flex items-center gap-3">
+          <p className="text-gray-800 flex-row flex">
+            <InlineMath math="\beta" />:{"  "}
+          </p>
+
+          <Slider
+            value={beta2}
+            step={0.05}
+            min={0}
+            max={0.5}
+            onChange={(_, val) => setBeta2(val as number)}
+            valueLabelDisplay="auto"
+          />
+        </h1>
+
+        <TextBlock>
+          En testant cette implémentation, on remarque que le mécanisme de
+          détection des nœuds byzantins est relativement efficace. Il produit
+          peu de faux positifs mais a tout de même des difficultés à détecter
+          certains comportements plus subtils. Il faut aussi noter que
+          l&apos;implémentation a été testé sur l&apos;adversaire cautious (Help
+          the weakest). C&apos;est un adversaire difficile à détecter de par son
+          comportement cohérent. On imagine donc que la détection serait encore
+          plus efficace contre des adversaires semi-cautious ou berserk, qui
+          génèrent plus d&apos;incohérences dans leurs réponses.
+        </TextBlock>
+
+        <TextBlock>
+          Il serait intéressant d&apos;évaluer notre mécanisme de détection en
+          faisant des statistiques sur un grand nombre d&apos;exécutions, en
+          mesurant les taux de détection et de faux positifs. De plus, on
+          pourrait envisager d&apos;affiner les critères de détection en
+          analysant plus finement les comportements des nœuds au fil du temps,
+          ou en intégrant des techniques d&apos;apprentissage automatique pour
+          identifier des schémas plus complexes.
+        </TextBlock>
       </div>
     </div>
   );

@@ -305,27 +305,21 @@ const Lab5Page = () => {
           {`package main
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
+	"sync"
 	"time"
 )
 
 type Node struct {
 	id        int
-	opinion   int // 0 or 1
-	stable    int // number of rounds without change
+	opinion   int
+	stable    int
 	byzantine bool
 }
 
-const (
-	n    = 5
-	l    = 3   // number of queried nodes
-	beta = 0.2 // threshold interval
-	v    = 5   // stabilization rounds
-)
-
-func helpWeakest(nodes []Node, honestCount int) int {
-	// Returns the Byzantine vote: always support the weaker honest opinion
+func helpWeakest(nodes []Node) int {
 	zeros, ones := 0, 0
 	for _, nd := range nodes {
 		if !nd.byzantine {
@@ -342,55 +336,94 @@ func helpWeakest(nodes []Node, honestCount int) int {
 	return 1
 }
 
-func main() {
-	rand.New(rand.NewSource(time.Now().UnixNano()))
+const (
+  b    = ${beta}
+  v    = ${v}
+  l    = ${l}
+  n    = ${nodeCount}
+  q    = ${byzantineProp}
+)
+
+func main()  {
+	rand.Seed(time.Now().UnixNano())
+
+	// Timeout global
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	defer cancel()
+
 	nodes := make([]Node, n)
 
-	// Initialize opinions arbitrarily
-	for i := 0; i < n; i++ {
-		nodes[i] = Node{id: i + 1, opinion: rand.Intn(2), stable: 0, byzantine: false}
+	// Determine Byzantine count
+	nByzantine := int(float64(n) * q)
+	if nByzantine > n/2 {
+		nByzantine = n / 2
 	}
 
-	// Node 1 is Byzantine
-	nodes[0].byzantine = true
+	// Init random opinions
+	for i := 0; i < n; i++ {
+		nodes[i] = Node{id: i + 1, opinion: rand.Intn(2)}
+	}
+
+	// Random Byzantine assignment
+	perm := rand.Perm(n)
+	for i := 0; i < nByzantine; i++ {
+		nodes[perm[i]].byzantine = true
+	}
 
 	start := time.Now()
 
 	for {
-		allStable := true
-
-		// Compute new opinions
-		newOpinions := make([]int, n)
-
-		for i := range nodes {
-			nd := &nodes[i]
-
-			if nd.byzantine {
-				// Byzantine: use Help the Weakest
-				newOpinions[i] = helpWeakest(nodes, n-1)
-				continue
-			}
-
-			// Honest node: sample l random nodes
-			sum := 0
-			for j := 0; j < l; j++ {
-				target := rand.Intn(n)
-				sum += nodes[target].opinion
-			}
-			eta := float64(sum) / float64(l)
-
-			U := beta + rand.Float64()*(1-2*beta)
-
-			if eta > U {
-				newOpinions[i] = 1
-			} else if eta < U {
-				newOpinions[i] = 0
-			} else {
-				newOpinions[i] = nd.opinion
-			}
+		select {
+		case <-ctx.Done():
+			return "TimeOut sur l'execution, vous devriez modifier les paramètres d'entrée"
+		default:
+			// Continue execution
 		}
 
-		// Apply updates and check stability
+		allStable := true
+		newOpinions := make([]int, n)
+		var wg sync.WaitGroup
+
+		for i := range nodes {
+			wg.Add(1)
+			go func(i int) {
+				defer wg.Done()
+
+				select {
+				case <-ctx.Done():
+					return
+				default:
+				}
+
+				node := &nodes[i]
+
+				if node.byzantine {
+					newOpinions[i] = helpWeakest(nodes)
+					return
+				}
+
+				sum := 0
+				for j := 0; j < l; j++ {
+					target := rand.Intn(n)
+					sum += nodes[target].opinion
+				}
+				eta := float64(sum) / float64(l)
+
+				U := b + rand.Float64()*(1-2*b)
+
+				if eta > U {
+					newOpinions[i] = 1
+				} else if eta < U {
+					newOpinions[i] = 0
+				} else {
+					newOpinions[i] = node.opinion
+				}
+			}(i)
+		}
+
+		wg.Wait()
+
+		// Apply updates
 		for i := range nodes {
 			if nodes[i].opinion == newOpinions[i] {
 				nodes[i].stable++
@@ -413,13 +446,14 @@ func main() {
 
 	fmt.Println("Final opinions:")
 	for _, nd := range nodes {
-		fmt.Printf("Node %d (Byz=%v): %d\n", nd.id, nd.byzantine, nd.opinion)
+		fmt.Printf("Node %d (Byz=%v): %d\\n", nd.id, nd.byzantine, nd.opinion)
 	}
 
-	fmt.Printf("Time elapsed: %v\n", elapsed)
-	// Check if honest nodes reached consensus
-	consensus := true
+	fmt.Printf("Time elapsed: %v\\n", elapsed)
+
+	// Check consensus of honest nodes
 	ref := -1
+	consensus := true
 	for _, nd := range nodes {
 		if nd.byzantine {
 			continue
@@ -458,7 +492,7 @@ func main() {
             value={nodeCount}
             step={1}
             min={1}
-            max={100}
+            max={50}
             onChange={(_, val) => {
               setNodeCount(val as number);
               if (l > (val as number)) {
@@ -509,6 +543,35 @@ func main() {
             valueLabelDisplay="auto"
           />
         </h1>
+
+        <TextBlock>
+          On jouant avec les paramètres, on remarque que l&apos;augmentation du
+          nombre de nœuds byzantins (augmentation de q) rend plus difficile le
+          consensus parmi les nœuds honnêtes. En effet, les nœuds byzantins
+          influencent les décisions des nœuds honnêtes en biaisant les
+          échantillons qu&apos;ils reçoivent. Cela peut entraîner des situations
+          où les nœuds honnêtes ont du mal à atteindre un consensus clair,
+          surtout lorsque la proportion de nœuds byzantins est élevée. De plus,
+          une augmentation de v ralentit également le processus de consensus,
+          car les nœuds honnêtes doivent rester stables plus longtemps avant de
+          considérer leur opinion comme définitive. En revanche,
+          l&apos;augmentation de l&apos;échantillon <InlineMath math="\ell" />{" "}
+          semble améliorer la résilience du système aux nœuds byzantins, car les
+          nœuds honnêtes obtiennent une meilleure estimation de l&apos;opinion
+          majoritaire. Aussi, il est clair que diminuer{" "}
+          <InlineMath math="\beta" /> rend le consensus plus rapide, car les
+          nœuds honnêtes sont plus enclins à changer d&apos;opinion en fonction
+          des échantillons qu&apos;ils reçoivent. Le choix de ces paramètres
+          doit donc être fait en fonction du contexte spécifique et des
+          exigences de tolérance aux pannes du système distribué en question. Un
+          mauvais paramétrage peut entraîner une non convergence de
+          l&apos;algorithme. Il convient de bien sélectionner les paramètres
+          pour garantir un équilibre entre rapidité et robustesse du consensus.
+        </TextBlock>
+
+        <h3 className="text-xl font-semibold text-gray-700">
+          Question 7 — Adversary
+        </h3>
       </div>
     </div>
   );

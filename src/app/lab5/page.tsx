@@ -646,6 +646,14 @@ func main()  {
           itération.
         </TextBlock>
 
+        <TextBlock>
+          L&apos;idée est ici de surveiller le comportement des nœuds au fil des
+          rounds et d&apos;identifier ceux qui affichent des schémas de
+          comportement incohérents ou suspects. Ainsi, on enregistre à chaque
+          round les opinions de tous les nœuds et on analyse cet historique pour
+          détecter les anomalies.
+        </TextBlock>
+
         <CodeBlock
           endpoint={`https://go-backend-531057961347.europe-west1.run.app/lab5?fn=q8&bprop=${byzantineProp}&cnt=${nodeCount}&beta=${beta}&v=${v}&l=${l}`}
           log={log2}
@@ -993,7 +1001,12 @@ func main() {
           the weakest). C&apos;est un adversaire difficile à détecter de par son
           comportement cohérent. On imagine donc que la détection serait encore
           plus efficace contre des adversaires semi-cautious ou berserk, qui
-          génèrent plus d&apos;incohérences dans leurs réponses.
+          génèrent plus d&apos;incohérences dans leurs réponses. Pour améliorer
+          la détection, on pourrait envisager de mettre plus d&apos;informations
+          dans l&apos;historique, comme les noeuds ciblés par chaque requête et
+          pourquoi pas même les temps de réponse, car on peut imaginer que les
+          nœuds byzantins pourraient avoir des temps de réponse différents en
+          fonction de leurs stratégies.
         </TextBlock>
 
         <TextBlock>

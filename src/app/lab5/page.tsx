@@ -1,11 +1,22 @@
 // app/lab4/page.tsx
 "use client";
 
+import { CodeBlock } from "@/components/CodeBlock";
 import { TextBlock } from "@/components/TextBlock";
+import { Slider } from "@mui/joy";
 import "katex/dist/katex.min.css";
+import { useState } from "react";
 import { InlineMath, BlockMath } from "react-katex";
 
 const Lab5Page = () => {
+  const [log1, setLog1] = useState("");
+  const [running1, setRunning1] = useState(false);
+  const [beta, setBeta] = useState(0.2);
+  const [l, setL] = useState(3);
+  const [v, setV] = useState(5);
+  const [nodeCount, setNodeCount] = useState(5);
+  const [byzantineProp, setByzantineProp] = useState(0.2);
+
   return (
     <div className="min-h-screen bg-linear-to-b from-gray-50 via-gray-100 to-gray-50 p-6 pt-40">
       <h1 className="text-4xl font-bold text-gray-900 mb-12 text-center">
@@ -269,7 +280,235 @@ const Lab5Page = () => {
           2 — Implementations of the fast probabilistic consensus
         </h2>
 
-        <h3 className="text-xl font-semibold text-gray-700">Question 5 —</h3>
+        <h3 className="text-xl font-semibold text-gray-700">
+          Question 5 — Simple Attack
+        </h3>
+
+        <TextBlock>
+          Une simple attaque pourrait consister mentir à chaque fois, en donnant
+          toujours la même valeur pour tous les états du réseau. Cela fausserait
+          la moyenne calculée et pourrait potentiellement influencer le
+          consensus final.
+        </TextBlock>
+
+        <h3 className="text-xl font-semibold text-gray-700">
+          Question 6 — Implementation
+        </h3>
+
+        <CodeBlock
+          endpoint={`https://go-backend-531057961347.europe-west1.run.app/lab5?fn=q6&bprop=${byzantineProp}&cnt=${nodeCount}&beta=${beta}&v=${v}&l=${l}`}
+          log={log1}
+          setLog={setLog1}
+          running={running1}
+          setRunning={setRunning1}
+        >
+          {`package main
+
+import (
+	"fmt"
+	"math/rand"
+	"time"
+)
+
+type Node struct {
+	id        int
+	opinion   int // 0 or 1
+	stable    int // number of rounds without change
+	byzantine bool
+}
+
+const (
+	n    = 5
+	l    = 3   // number of queried nodes
+	beta = 0.2 // threshold interval
+	v    = 5   // stabilization rounds
+)
+
+func helpWeakest(nodes []Node, honestCount int) int {
+	// Returns the Byzantine vote: always support the weaker honest opinion
+	zeros, ones := 0, 0
+	for _, nd := range nodes {
+		if !nd.byzantine {
+			if nd.opinion == 0 {
+				zeros++
+			} else {
+				ones++
+			}
+		}
+	}
+	if zeros <= ones {
+		return 0
+	}
+	return 1
+}
+
+func main() {
+	rand.New(rand.NewSource(time.Now().UnixNano()))
+	nodes := make([]Node, n)
+
+	// Initialize opinions arbitrarily
+	for i := 0; i < n; i++ {
+		nodes[i] = Node{id: i + 1, opinion: rand.Intn(2), stable: 0, byzantine: false}
+	}
+
+	// Node 1 is Byzantine
+	nodes[0].byzantine = true
+
+	start := time.Now()
+
+	for {
+		allStable := true
+
+		// Compute new opinions
+		newOpinions := make([]int, n)
+
+		for i := range nodes {
+			nd := &nodes[i]
+
+			if nd.byzantine {
+				// Byzantine: use Help the Weakest
+				newOpinions[i] = helpWeakest(nodes, n-1)
+				continue
+			}
+
+			// Honest node: sample l random nodes
+			sum := 0
+			for j := 0; j < l; j++ {
+				target := rand.Intn(n)
+				sum += nodes[target].opinion
+			}
+			eta := float64(sum) / float64(l)
+
+			U := beta + rand.Float64()*(1-2*beta)
+
+			if eta > U {
+				newOpinions[i] = 1
+			} else if eta < U {
+				newOpinions[i] = 0
+			} else {
+				newOpinions[i] = nd.opinion
+			}
+		}
+
+		// Apply updates and check stability
+		for i := range nodes {
+			if nodes[i].opinion == newOpinions[i] {
+				nodes[i].stable++
+			} else {
+				nodes[i].stable = 0
+			}
+			nodes[i].opinion = newOpinions[i]
+
+			if nodes[i].stable < v {
+				allStable = false
+			}
+		}
+
+		if allStable {
+			break
+		}
+	}
+
+	elapsed := time.Since(start)
+
+	fmt.Println("Final opinions:")
+	for _, nd := range nodes {
+		fmt.Printf("Node %d (Byz=%v): %d\n", nd.id, nd.byzantine, nd.opinion)
+	}
+
+	fmt.Printf("Time elapsed: %v\n", elapsed)
+	// Check if honest nodes reached consensus
+	consensus := true
+	ref := -1
+	for _, nd := range nodes {
+		if nd.byzantine {
+			continue
+		}
+		if ref == -1 {
+			ref = nd.opinion
+		} else if nd.opinion != ref {
+			consensus = false
+		}
+	}
+
+	if consensus {
+		fmt.Println("Honest nodes reached consensus.")
+	} else {
+		fmt.Println("Honest nodes did NOT reach consensus.")
+	}
+}`}
+        </CodeBlock>
+
+        <h1 className="text-gray-800 justify-center flex items-center gap-3">
+          <p className="text-gray-800">q: </p>
+
+          <Slider
+            value={byzantineProp}
+            step={0.05}
+            min={0}
+            max={0.5}
+            onChange={(_, val) => setByzantineProp(val as number)}
+            valueLabelDisplay="auto"
+          />
+        </h1>
+        <h1 className="text-gray-800 justify-center flex items-center gap-3">
+          <p className="text-gray-800">n: </p>
+
+          <Slider
+            value={nodeCount}
+            step={1}
+            min={1}
+            max={100}
+            onChange={(_, val) => {
+              setNodeCount(val as number);
+              if (l > (val as number)) {
+                setL(val as number);
+              }
+            }}
+            valueLabelDisplay="auto"
+          />
+        </h1>
+
+        <h1 className="text-gray-800 justify-center flex items-center gap-3">
+          <p className="text-gray-800 flex-row flex">
+            <InlineMath math="\ell" />:{"  "}
+          </p>
+
+          <Slider
+            value={l}
+            step={1}
+            min={1}
+            max={nodeCount}
+            onChange={(_, val) => setL(val as number)}
+            valueLabelDisplay="auto"
+          />
+        </h1>
+        <h1 className="text-gray-800 justify-center flex items-center gap-3">
+          <p className="text-gray-800">v: </p>
+
+          <Slider
+            value={v}
+            step={1}
+            min={1}
+            max={20}
+            onChange={(_, val) => setV(val as number)}
+            valueLabelDisplay="auto"
+          />
+        </h1>
+        <h1 className="text-gray-800 justify-center flex items-center gap-3">
+          <p className="text-gray-800 flex-row flex">
+            <InlineMath math="\beta" />:{"  "}
+          </p>
+
+          <Slider
+            value={beta}
+            step={0.05}
+            min={0}
+            max={0.5}
+            onChange={(_, val) => setBeta(val as number)}
+            valueLabelDisplay="auto"
+          />
+        </h1>
       </div>
     </div>
   );

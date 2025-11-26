@@ -27,23 +27,23 @@ const Lab5Page = () => {
           <BlockMath math="X_{k+1} \in \{m-1, m, m+1\}" />
           On sait aussi que pour chaque noeud, la probabilité qu&apos;il ait
           l&apos;opinion 1 vaut <InlineMath math="\frac{m}{n}" /> que l&apos;on
-          notera <InlineMath math="q" />. Ainsi le noeud sélectionné a
+          notera <InlineMath math="p" />. Ainsi le noeud sélectionné a
           l&apos;opinion de la majorité des 3 noeuds sélectionnés. La
           probabilité que les 3 noeuds aient l&apos;opinion 1 est{" "}
-          <InlineMath math="q^3" />. La probabilité que 2 noeuds aient
+          <InlineMath math="p^3" />. La probabilité que 2 noeuds aient
           l&apos;opinion 1 et 1 noeud l&apos;opinion 0 est{" "}
-          <InlineMath math="3q^2(1-q)" />. Donc la probablité que le noeud
+          <InlineMath math="3p^2(1-p)" />. Donc la probablité que le noeud
           sélectionné prenne l&apos;opinion 1 est d&apos;après les probablités
           totales:
-          <BlockMath math="3q^2(1-q) + q^3 = 3q^2 - 2q^3" />
-          Mais le noeud sélectionné a une probabilité <InlineMath math="q" />{" "}
+          <BlockMath math="3p^2(1-p) + p^3 = 3p^2 - 2p^3" />
+          Mais le noeud sélectionné a une probabilité <InlineMath math="p" />{" "}
           d&apos;avoir déjà l&apos;opinion 1 et donc de ne pas changer
           l&apos;effectif. Ainsi la probabilité que l&apos;effectif augmente de
           1 est:
-          <BlockMath math="P(X_{k+1} = m+1 | X_k = m) = (1-q)(3q^2 - 2q^3) = 3q^2 - 5q^3 + 2q^4" />
+          <BlockMath math="P(X_{k+1} = m+1 | X_k = m) = (1-p)(3p^2 - 2p^3) = 3p^2 - 5p^3 + 2p^4" />
           Par symétrie, la probabilité que l&apos;effectif diminue de 1 est la
           même:
-          <BlockMath math="P(X_{k+1} = m-1 | X_k = m) = q(3(1-q)^2 - 2(1-q)^3) = 3q - 8q^2 + 6q^3 - 2q^4" />
+          <BlockMath math="P(X_{k+1} = m-1 | X_k = m) = p(3(1-p)^2 - 2(1-p)^3) = 3p - 8p^2 + 6p^3 - 2p^4" />
           Enfin, la probabilité que l&apos;effectif reste le même est:
           <BlockMath
             math={String.raw`
@@ -51,7 +51,7 @@ const Lab5Page = () => {
       P(X_{k+1} = m \mid X_k = m)
         &= 1 - P(X_{k+1} = m+1 \mid X_k = m)
            - P(X_{k+1} = m-1 \mid X_k = m) \\
-        &= 1 - 3q + 5q^2 - q^3
+        &= 1 - 3p + 5p^2 - p^3
     \end{aligned}
   `}
           />
@@ -61,14 +61,14 @@ const Lab5Page = () => {
     P(X_{k+1} = m' \mid X_k = m)
     =
     \begin{cases}
-      3q^2 - 5q^3 + 2q^4, & \text{si } m' = m+1, \\
-      1 - 3q + 5q^2 - q^3, & \text{si } m' = m, \\
-      3q - 8q^2 + 6q^3 - 2q^4, & \text{si } m' = m-1, \\
+      3p^2 - 5p^3 + 2p^4, & \text{si } m' = m+1, \\
+      1 - 3p + 5p^2 - p^3, & \text{si } m' = m, \\
+      3p - 8p^2 + 6p^3 - 2p^4, & \text{si } m' = m-1, \\
       0 & \text{sinon.}
     \end{cases}
   `}
           />
-          En remplaçant <InlineMath math="q" /> par{" "}
+          En remplaçant <InlineMath math="p" /> par{" "}
           <InlineMath math="\frac{m}{n}" />, on obtient le résultat:
           <BlockMath
             math={String.raw`
@@ -140,12 +140,136 @@ const Lab5Page = () => {
           stratégique. Par exemple, il choisi pour chaque k de mettre ses noeuds
           sur le choix de la minorité parmi les nœuds honnêtes à l&apos;instant
           k-1. Il peut aussi mettre un biais sur une opinion particulière pour
-          influencer le consensus final.
+          influencer le consensus final. Il peut aussi ajouter un bruit
+          aléatoire pour perturber le processus de convergence.
+        </TextBlock>
+
+        <TextBlock>
+          Non, 0 et n ne sont plus des états absorbants dans ce cas. En effet,
+          même si tous les nœuds honnêtes ont la même opinion, les nœuds
+          byzantins peuvent toujours choisir l&apos;opinion opposée, ce qui peut
+          faire changer l&apos;effectif total. Cela est vraie à partir du moment
+          où <InlineMath math="q > 0" />.
+        </TextBlock>
+
+        <TextBlock>
+          On étudie uniquement le cas où le nœud sélectionné est honnête.
+          Reprenons le raisonnement de la question 1, seul le nœud sélectionné
+          peut changer l&apos;effectif total de 1. Ainsi:
+          <BlockMath math="\overline{X}_{k+1} \in \{m-1, m, m+1\}" />
+          On a alors deux cas en fonction de ce que pense la majorité des nœuds
+          honnêtes. La majorité des nœuds honnêtes a l&apos;opinion 1 avec une
+          probabilité <InlineMath math="\frac{\overline{X}_{k}}{(1-q)n}" />{" "}
+          notons cela s. Raisonnons par disjonction de cas sur la majorité des
+          nœuds honnêtes. <br />— Si la majorité des nœuds honnêtes a
+          l&apos;opinion 1, pour que les 3 nœuds aient l&apos;opinion 1 il faut
+          qu&apos;ils soient tous honnêtes et qu&apos;ils aient les 3
+          l&apos;opinion 1. La probabilité de cet événement est donc{" "}
+          <InlineMath math="(1-q)^3 s^3" />. pour que 2 nœuds aient
+          l&apos;opinion 1 et 1 noeud l&apos;opinion 0, il y a deux
+          possibilités: soit on a 3 nœuds honnêtes dont 2 ont l&apos;opinion 1
+          et 1 a l&apos;opinion 0, soit on a 2 nœuds honnêtes avec
+          l&apos;opinion 1 et 1 nœud byzantin (un nœud bizantin ne peut pas
+          avoir l&apos;opinion 0 ici). La probabilité de cet événement est donc
+          en sommant:
+          <BlockMath math="(1-q)^3 s^2(1-s) + (1-q)^2 q s^2" />
+          Ainsi dans par probabilité totale, la probabilité que le nœud
+          sélectionné prenne l&apos;opinion 1 dans ce cas est:
+          <BlockMath math="(1-q)^3 s^3 + (1-q)^3 s^2(1-s) + (1-q)^2 q s^2" />
+          En simplifiant on trouve:
+          <BlockMath math="(1-q)^2 s^2" />
+          — Si la majorité des nœuds honnêtes a l&apos;opinion 0, pour que les 3
+          nœuds aient l&apos;opinion 1. il y a 4 possibilités: soit les 3 nœuds
+          sont bizantins. Cela a une probabilité de <InlineMath math="q^3" /> de
+          se produire. Soit 2 nœuds sont byzantins et 1 nœud honnête avec
+          l&apos;opinion 1. Cela a une probabilité de{" "}
+          <InlineMath math="q^2(1-q)s" /> de se produire. Soit 1 nœud est
+          byzantin et 2 nœuds honnêtes avec l&apos;opinion 1. Cela a une
+          probabilité de <InlineMath math="q(1-q)^2 s^2" /> de se produire.
+          Enfin, les 3 nœuds sont honnêtes avec l&apos;opinion 1. Cela a une
+          probabilité de <InlineMath math="(1-q)^3 s^3" /> de se produire. La
+          probabilité totale que les 3 nœuds aient l&apos;opinion 1 est donc la
+          somme de ces 4 probabilités:
+          <BlockMath math="q^3 + q^2(1-q)s + q(1-q)^2 s^2 + (1-q)^3 s^3" />
+          Pour que 2 nœuds aient l&apos;opinion 1 et 1 noeud l&apos;opinion 0,
+          il y a 3 possibilités (on ne peut pas avoir 3 nœuds bizantins). Soit 2
+          nœuds bizantins et 1 nœud honnête avec l&apos;opinion 0. Cela a une
+          probabilité de <InlineMath math="q^2(1-q)(1-s)" /> de se produire.
+          Soit 1 nœud byzantin, 1 nœud honnête avec l&apos;opinion 1 et 1 nœud
+          honnête avec l&apos;opinion 0. Cela a une probabilité de{" "}
+          <InlineMath math="q(1-q)^2 s(1-s)" /> de se produire. Enfin, 3 nœuds
+          honnêtes avec 2 ayant l&apos;opinion 1 et 1 ayant l&apos;opinion 0.
+          Cela a une probabilité de <InlineMath math="(1-q)^3 s^2(1-s)" /> de se
+          produire. La probabilité totale que 2 nœuds aient l&apos;opinion 1 et
+          1 noeud l&apos;opinion 0 est donc la somme de ces 3 probabilités:
+          <BlockMath math="q^2(1-q)(1-s) + q(1-q)^2 s(1-s) + (1-q)^3 s^2(1-s)" />
+          Ainsi par probabilité totale, la probabilité que le nœud sélectionné
+          prenne l&apos;opinion 1 dans ce cas est:
+          <BlockMath math="q^3 + q^2(1-q)s + q(1-q)^2 s^2 + (1-q)^3 s^3 + q^2(1-q)(1-s) + q(1-q)^2 s(1-s) + (1-q)^3 s^2(1-s)" />
+          qui se simplifie en:
+          <BlockMath math="q^2 + (1-q)^2 s(q+(1-q)s)" />
+          <br />
+          En regroupant alors les deux cas en multipliant par les probabilités
+          de chaque cas, on trouve que la probabilité que le nœud sélectionné
+          prenne l&apos;opinion 1 est:
+          <BlockMath math="s*(1-q)^2s^2+ (1-s)*(q^2 + (1-q)^2 s(q+(1-q)s))" />
+          En développant et simplifiant, on trouve:
+          <BlockMath math="s(1-q)^2(q(1-s)^2 +s) + (1-s)q^2" />
+          Mais le noeud sélectionné a une probabilité <InlineMath math="s" />{" "}
+          d&apos;avoir déjà l&apos;opinion 1 et donc de ne pas changer
+          l&apos;effectif. Ainsi la probabilité que l&apos;effectif augmente de
+          1 est:
+          <BlockMath math="P(\overline{X}_{k+1} = m+1 | X_k = m) = (1-s)(s(1-q)^2(q(1-s)^2 +s) + (1-s)q^2)" />
+          Par symétrie, la probabilité que l&apos;effectif diminue de 1 est la
+          même:
+          <BlockMath math="P(\overline{X}_{k+1} = m-1 | X_k = m) = s((1-s)(1-q)^2(qs^2 + (1-s)) + sq^2)" />
+          Enfin, la probabilité que l&apos;effectif reste le même est:
+          <BlockMath
+            math={String.raw`
+    \begin{aligned}
+      P(\overline{X}_{k+1} = m \mid X_k = m)
+        &= 1 - P(\overline{X}_{k+1} = m+1 \mid X_k = m)
+           - P(\overline{X}_{k+1} = m-1 \mid X_k = m) \\
+        &= 1 - (1-s)(s(1-q)^2(q(1-s)^2 +s) + (1-s)q^2) - s((1-s)(1-q)^2(qs^2 + (1-s)) + sq^2) \\
+        &= 1 - (1-q)^2 \, s \, (1-s) \left[ 1 + q \left( s^2 + (1-s)^2 \right) \right] - q^2 \left( s^2 + (1-s)^2 \right) \\
+    \end{aligned}
+  `}
+          />
+          Finalement,
+          <BlockMath
+            math={String.raw`
+    P(\overline{X}_{k+1} = m' \mid X_k = m)
+    =
+    \begin{cases}
+      (1-s)(s(1-q)^2(q(1-s)^2 +s) + (1-s)q^2), & \text{si } m' = m+1, \\
+      1 - (1-q)^2 \, s \, (1-s) \left[ 1 + q \left( s^2 + (1-s)^2 \right) \right] - q^2 \left( s^2 + (1-s)^2 \right), & \text{si } m' = m, \\
+      s((1-s)(1-q)^2(qs^2 + (1-s)) + sq^2), & \text{si } m' = m-1, \\
+      0 & \text{sinon.}
+    \end{cases}
+  `}
+          />
+          En remplaçant <InlineMath math="s" /> par{" "}
+          <InlineMath math="\frac{\overline{X}_{k}}{(1-q)n}" />, on obtient le
+          résultat:
+          <BlockMath
+            math={String.raw`
+    P(\overline{X}_{k+1} = m' \mid X_k = m)
+    =
+    \begin{cases}
+      (1-\frac{m}{(1-q)n})(\frac{m}{(1-q)n}(1-q)^2(q(1-\frac{m}{(1-q)n})^2 +\frac{m}{(1-q)n}) + (1-\frac{m}{(1-q)n})q^2), & \text{si } m' = m+1, \\
+      1 - (1-q)^2 \, \frac{m}{(1-q)n} \, (1-\frac{m}{(1-q)n}) \left[ 1 + q \left( (\frac{m}{(1-q)n})^2 + (1-\frac{m}{(1-q)n})^2 \right) \right] - q^2 \left( (\frac{m}{(1-q)n})^2 + (1-\frac{m}{(1-q)n})^2 \right), & \text{si } m' = m, \\
+      \frac{m}{(1-q)n}((1-\frac{m}{(1-q)n})(1-q)^2(q(\frac{m}{(1-q)n})^2 + (1-\frac{m}{(1-q)n})) + \frac{m}{(1-q)n}q^2), & \text{si } m' = m-1, \\
+      0 & \text{sinon.}
+    \end{cases}
+  `}
+          />
         </TextBlock>
 
         <h2 className="text-2xl font-semibold text-gray-800">
           2 — Implementations of the fast probabilistic consensus
         </h2>
+
+        <h3 className="text-xl font-semibold text-gray-700">Question 5 —</h3>
       </div>
     </div>
   );

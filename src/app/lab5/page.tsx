@@ -655,7 +655,7 @@ func main()  {
         </TextBlock>
 
         <CodeBlock
-          endpoint={`https://go-backend-531057961347.europe-west1.run.app/lab5?fn=q8&bprop=${byzantineProp}&cnt=${nodeCount}&beta=${beta}&v=${v}&l=${l}`}
+          endpoint={`https://go-backend-531057961347.europe-west1.run.app/lab5?fn=q8&bprop=${byzantineProp2}&cnt=${nodeCount2}&beta=${beta2}&v=${v2}&l=${l2}`}
           log={log2}
           setLog={setLog2}
           running={running2}

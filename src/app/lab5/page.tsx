@@ -76,28 +76,30 @@ const Lab5Page = () => {
           Finalement,
           <BlockMath
             math={String.raw`
-    P(X_{k+1} = m&apos; \mid X_k = m)
-    =
-    \begin{cases}
-      3p^2 - 5p^3 + 2p^4, & \text{si } m&apos; = m+1, \\
-      1 - 3p + 5p^2 - p^3, & \text{si } m&apos; = m, \\
-      3p - 8p^2 + 6p^3 - 2p^4, & \text{si } m&apos; = m-1, \\
-      0 & \text{sinon.}
-    \end{cases}
+    P(X_{k+1} = m' \mid X_k = m)
+=
+\begin{cases}
+  3p^2 - 5p^3 + 2p^4, & \text{si } m' = m+1, \\
+  1 - 3p + 5p^2 - p^3, & \text{si } m' = m, \\
+  3p - 8p^2 + 6p^3 - 2p^4, & \text{si } m' = m-1, \\
+  0, & \text{sinon.}
+\end{cases}
+
   `}
           />
           En remplaçant <InlineMath math="p" /> par{" "}
           <InlineMath math="\frac{m}{n}" />, on obtient le résultat:
           <BlockMath
             math={String.raw`
-    P(X_{k+1} = m&apos; \mid X_k = m)
-    =
-    \begin{cases}
-      3\left(\frac{m}{n}\right)^2 - 5\left(\frac{m}{n}\right)^3 + 2\left(\frac{m}{n}\right)^4, & \text{si } m&apos; = m+1, \\
-      1 - 3\left(\frac{m}{n}\right) + 5\left(\frac{m}{n}\right)^2 - \left(\frac{m}{n}\right)^3, & \text{si } m&apos; = m, \\
-      3\left(\frac{m}{n}\right) - 8\left(\frac{m}{n}\right)^2 + 6\left(\frac{m}{n}\right)^3 - 2\left(\frac{m}{n}\right)^4, & \text{si } m&apos; = m-1, \\
-      0 & \text{sinon.}
-    \end{cases}
+P(X_{k+1} = m' \mid X_k = m)
+=
+\begin{cases}
+  3\left(\frac{m}{n}\right)^2 - 5\left(\frac{m}{n}\right)^3 + 2\left(\frac{m}{n}\right)^4, & \text{si } m' = m+1, \\
+  1 - 3\left(\frac{m}{n}\right) + 5\left(\frac{m}{n}\right)^2 - \left(\frac{m}{n}\right)^3, & \text{si } m' = m, \\
+  3\left(\frac{m}{n}\right) - 8\left(\frac{m}{n}\right)^2 + 6\left(\frac{m}{n}\right)^3 - 2\left(\frac{m}{n}\right)^4, & \text{si } m' = m-1, \\
+  0, & \text{sinon.}
+\end{cases}
+
   `}
           />
         </TextBlock>
@@ -256,14 +258,16 @@ const Lab5Page = () => {
           Finalement,
           <BlockMath
             math={String.raw`
-    P(\overline{X}_{k+1} = m&apos; \mid X_k = m)
-    =
-    \begin{cases}
-      (1-s)(s(1-q)^2(q(1-s)^2 +s) + (1-s)q^2), & \text{si } m&apos; = m+1, \\
-      1 - (1-q)^2 \, s \, (1-s) \left[ 1 + q \left( s^2 + (1-s)^2 \right) \right] - q^2 \left( s^2 + (1-s)^2 \right), & \text{si } m&apos; = m, \\
-      s((1-s)(1-q)^2(qs^2 + (1-s)) + sq^2), & \text{si } m&apos; = m-1, \\
-      0 & \text{sinon.}
-    \end{cases}
+P(\overline{X}_{k+1} = m' \mid X_k = m)
+=
+\begin{cases}
+  (1-s)\bigl[s(1-q)^2\bigl(q(1-s)^2 + s\bigr) + (1-s)q^2\bigr], & \text{si } m' = m+1, \\[6pt]
+  1 - (1-q)^2 s(1-s)\!\left[1 + q\bigl(s^2 + (1-s)^2\bigr)\right]
+    - q^2\bigl(s^2 + (1-s)^2\bigr), & \text{si } m' = m, \\[6pt]
+  s\bigl[(1-s)(1-q)^2(qs^2 + (1-s)) + sq^2\bigr], & \text{si } m' = m-1, \\[6pt]
+  0, & \text{sinon.}
+\end{cases}
+
   `}
           />
           En remplaçant <InlineMath math="s" /> par{" "}
@@ -271,14 +275,49 @@ const Lab5Page = () => {
           résultat:
           <BlockMath
             math={String.raw`
-    P(\overline{X}_{k+1} = m&apos; \mid X_k = m)
-    =
-    \begin{cases}
-      (1-\frac{m}{(1-q)n})(\frac{m}{(1-q)n}(1-q)^2(q(1-\frac{m}{(1-q)n})^2 +\frac{m}{(1-q)n}) + (1-\frac{m}{(1-q)n})q^2), & \text{si } m&apos; = m+1, \\
-      1 - (1-q)^2 \, \frac{m}{(1-q)n} \, (1-\frac{m}{(1-q)n}) \left[ 1 + q \left( (\frac{m}{(1-q)n})^2 + (1-\frac{m}{(1-q)n})^2 \right) \right] - q^2 \left( (\frac{m}{(1-q)n})^2 + (1-\frac{m}{(1-q)n})^2 \right), & \text{si } m&apos; = m, \\
-      \frac{m}{(1-q)n}((1-\frac{m}{(1-q)n})(1-q)^2(q(\frac{m}{(1-q)n})^2 + (1-\frac{m}{(1-q)n})) + \frac{m}{(1-q)n}q^2), & \text{si } m&apos; = m-1, \\
-      0 & \text{sinon.}
-    \end{cases}
+P(\overline{X}_{k+1} = m' \mid X_k = m)
+=
+\begin{cases}
+  \left(1-\frac{m}{(1-q)n}\right)
+  \Biggl[
+    \frac{m}{(1-q)n}(1-q)^2
+      \left(q\left(1-\frac{m}{(1-q)n}\right)^2 + \frac{m}{(1-q)n}\right)
+    + \left(1-\frac{m}{(1-q)n}\right) q^2
+  \Biggr],
+  & \text{si } m' = m+1,
+  \\[10pt]
+
+  1
+  - (1-q)^2 \frac{m}{(1-q)n}\left(1-\frac{m}{(1-q)n}\right)
+    \left[
+      1 + q\left(
+        \left(\frac{m}{(1-q)n}\right)^2
+        + \left(1-\frac{m}{(1-q)n}\right)^2
+      \right)
+    \right]
+  - q^2
+    \left[
+      \left(\frac{m}{(1-q)n}\right)^2
+      + \left(1-\frac{m}{(1-q)n}\right)^2
+    \right],
+  & \text{si } m' = m,
+  \\[10pt]
+
+  \frac{m}{(1-q)n}
+  \Biggl[
+    \left(1-\frac{m}{(1-q)n}\right)(1-q)^2
+      \left(
+        q\left(\frac{m}{(1-q)n}\right)^2
+        + \left(1-\frac{m}{(1-q)n}\right)
+      \right)
+    + \frac{m}{(1-q)n} q^2
+  \Biggr],
+  & \text{si } m' = m-1,
+  \\[10pt]
+
+  0, & \text{sinon.}
+\end{cases}
+
   `}
           />
         </TextBlock>

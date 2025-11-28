@@ -28,6 +28,7 @@ interface CodeBlockProps {
       isSent: boolean;
     }[]
   >;
+  language?: string;
 }
 
 interface LabResponse {
@@ -50,8 +51,8 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
   handleStopServers,
   runningServers,
   rttsRef,
+  language = "",
 }) => {
-  const isBrowser = typeof window !== "undefined";
   const logContainerRef = useRef<HTMLDivElement | null>(null);
   let [localLog, setLocalLog] = useState("");
   if (setLog) {
@@ -647,13 +648,18 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       id={id ? id : undefined}
       className="bg-gray-50 p-4 rounded-xl shadow-md border border-gray-200"
     >
-      <pre className="rounded-lg overflow-x-auto language-go" tabIndex={0}>
+      <pre
+        className={`rounded-lg overflow-x-auto ${
+          language ? language : "language-go"
+        }`}
+        tabIndex={0}
+      >
         <code
           style={{
             fontSize: isMobile ? "0.7rem" : "1rem",
             lineHeight: "1.3",
           }}
-          className="language-go"
+          className={`${language ? language : "language-go"}`}
         >
           {children}
         </code>
@@ -698,7 +704,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
           <CircularProgress /> Chargement en cours... ({loading} ms restante)
         </div>
       )}
-      {isBrowser && localLog && loading <= 0 && (
+      {!isMobile && localLog && loading <= 0 && (
         <div
           ref={logContainerRef}
           className="mt-3 bg-gray-900 text-green-400 p-3 rounded-lg font-mono text-[10px] md:text-sm whitespace-pre-wrap overflow-y-auto"

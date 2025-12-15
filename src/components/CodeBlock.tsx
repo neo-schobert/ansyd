@@ -692,6 +692,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
       )}
       {!wsRef && endpoint && (
         <button
+        type="button"
           onClick={handleExecuteHTTP}
           className="mt-3 px-4 py-2 bg-indigo-500 cursor-pointer text-white rounded-lg hover:bg-indigo-600 transition"
         >
@@ -704,7 +705,7 @@ export const CodeBlock: React.FC<CodeBlockProps> = ({
           <CircularProgress /> Chargement en cours... ({loading} ms restante)
         </div>
       )}
-      {!isMobile && localLog && loading <= 0 && (
+      { localLog && loading <= 0 && (
         <div
           ref={logContainerRef}
           className="mt-3 bg-gray-900 text-green-400 p-3 rounded-lg font-mono text-[10px] md:text-sm whitespace-pre-wrap overflow-y-auto"

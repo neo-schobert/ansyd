@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Projet ProCom",
-  description: "IHM du projet Procom",
+  title: "Présentation Méthode",
+  description: "Présentation de la méthode de travail en équipe agile.",
 };
 
 export default function RootLayout({

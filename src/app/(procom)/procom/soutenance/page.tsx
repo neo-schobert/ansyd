@@ -10,28 +10,43 @@ type DocLink = { label: string; href: string };
 type SlideData = {
   title: string;
   subtitle?: string;
-  bullets: string[];
-  docs: DocLink[];
+  bullets?: string[];
+  docs?: DocLink[];
+  image?: string;
 };
 
 const slides: SlideData[] = [
   {
-    title: "Séance 1 — Introduction",
-    subtitle: "Cadrage du projet et sécurisation de l'exécution",
+    title:
+      "Automated common vulnerabilities and exposures detection (CVEs)  with Large language Models (LLMs)",
+    subtitle: "Projet Complexe IMT Atlantique - Soutenance",
     bullets: [
-      "Objectif : cadrer le projet et sécuriser l’exécution.",
-      "- Cadrage : sujet reformulé, hypothèses, périmètre, risques majeurs.",
-      "- Roadmap : Gantt simplifié, jalons clés, responsabilités.",
-      "- Charte d’équipe : rôles, outils, format des comptes rendus.",
+      "SCHOBERT Néo • AYOUBI Houcine • El AKRABA Othmane • IDRISSA Traoré",
     ],
     docs: [],
+    image: "/images/logoIMTA.png",
   },
   {
-    title: "Séance 1 — Reformulation du sujet",
+    title: "Plan de la présentation",
     bullets: [
-      "Analyse du sujet initial pour en clarifier la portée",
-      "Identification des attentes de l'entreprise",
-      "Définition des livrables attendus",
+      "I - Contextualisation du projet",
+      "II - Choix Techniques",
+      "III - Avancement du projet et gestion des imprévus",
+      "IV - Résultats et perspectives",
+    ],
+  },
+  {
+    title: "I - Contextualisation du projet",
+    subtitle: "Contexte général",
+    image: "/images/contexte general.png",
+  },
+  {
+    title: "I - Contextualisation du projet",
+    subtitle: "Reformulation du sujet",
+    bullets: [
+      "Objectif principal : Développer un pipeline automatisé pour détecter les vulnérabilités logicielles (CVEs) en utilisant des modèles de langage avancés (LLMs)",
+      "Étapes clés : Extraction des dépendances, identification des CVEs, analyse structurelle du code, génération de visualisations et explications XAI",
+      "Technologies envisagées : Ollama pour l’exécution locale de LLMs, Unsloth pour le fine-tuning, outils d’analyse statique pour le code C/C++",
     ],
     docs: [
       {
@@ -41,7 +56,8 @@ const slides: SlideData[] = [
     ],
   },
   {
-    title: "Séance 1 — Hypothèses",
+    title: "II - Choix Techniques",
+    subtitle: "Hypothèses",
     bullets: [
       // Hypothèses
       "Hypothèses techniques : accès aux fichiers CMake et au code source C/C++, disponibilité des dépendances et versions correctes",
@@ -52,7 +68,8 @@ const slides: SlideData[] = [
     docs: [],
   },
   {
-    title: "Séance 1 — Périmètre",
+    title: "II - Choix Techniques",
+    subtitle: "Périmètre",
     bullets: [
       "Fonctionnalités incluses : extraction des dépendances, identification des CVE, analyse structurelle du code, construction du contexte d’appel, génération de visualisation et explications XAI",
       "Fonctionnalités exclues : intégration continue complète, prédiction de vulnérabilités non référencées, remédiation automatique",
@@ -61,7 +78,13 @@ const slides: SlideData[] = [
     docs: [],
   },
   {
-    title: "Séance 1 — Évaluation des risques",
+    title: "II - Choix Techniques",
+    subtitle: "Architecture du système",
+    image: "/images/choix techniques.png",
+  },
+  {
+    title: "III - Avancement du projet et gestion des imprévus",
+    subtitle: "Évaluation des risques",
     bullets: [
       "Identification des risques majeurs techniques et organisationnels",
       "Impact potentiel et probabilité",
@@ -74,25 +97,17 @@ const slides: SlideData[] = [
       },
       {
         label: "Évaluation des risques (au sein du groupe)",
-        href: "/procom/slides/risques-equipe",
+        href: "/procom/soutenance/risques-equipe",
       },
     ],
   },
   {
-    title: "Séance 1 — Roadmap",
+    title: "III - Avancement du projet et gestion des imprévus",
+    subtitle: "Diagramme de Gantt",
     bullets: [
-      "Découpage du projet en étapes et jalons clés",
-      "Ordre chronologique et priorisation",
-      "Indication des responsabilités par tâche",
-    ],
-    docs: [{ label: "Roadmap", href: "/procom/slides/roadmap" }],
-  },
-  {
-    title: "Séance 1 — Diagramme de Gantt",
-    bullets: [
-      "Visualisation de la planification sur la durée",
-      "Suivi de l'avancement par rapport aux jalons",
-      "Identification des chevauchements et dépendances",
+      "Planification initiale des tâches et jalons clés",
+      "Suivi de l’avancement et ajustements en fonction des imprévus",
+      "Suite du projet et prochaines étapes",
     ],
     docs: [
       {
@@ -102,75 +117,25 @@ const slides: SlideData[] = [
     ],
   },
   {
-    title: "Séance 1 — Charte d'équipe",
+    title: "IV - Résultats et perspectives",
+    subtitle: "Démonstration",
     bullets: [
-      "Définition des rôles et responsabilités",
-      "Outils utilisés pour le suivi et la collaboration",
-      "Format et fréquence des comptes rendus",
+      "Présentation du pipeline automatisé pour la détection des CVEs",
+      "Exemples concrets d’analyse de projets C/C++",
+      "Visualisations générées et explications XAI",
     ],
-    docs: [{ label: "Charte d'équipe", href: "/docs/charte.pdf" }],
+    docs: [
+      {
+        label: "Démonstration en direct",
+        href: "/procom",
+      },
+    ],
   },
   {
-    title: "Séance 2 — Introduction",
-    subtitle: "Suivi du projet",
-    bullets: [
-      "Objectif : vérifier l’exécution et la réactivité face aux aléas.",
-      "- Évaluer la cohérence entre avancement et jalons.",
-      "- Réactivité aux imprévus.",
-      "- Qualité de la collaboration et des documents.",
-    ],
+    title: "IV - Résultats et perspectives",
+    subtitle: "Perspectives",
+    bullets: [],
     docs: [],
-  },
-  {
-    title: "Séance 2 — Diagramme de Gantt (Suivi)",
-    bullets: [
-      "Evaluation de l'avancement par rapport au planning initial",
-      "Identification des écarts et ajustements nécessaires",
-      "Analyse de l'impact des imprévus sur le calendrier",
-    ],
-    docs: [
-      {
-        label: "Diagramme de Gantt",
-        href: "https://projet-complexe.atlassian.net/jira/core/projects/PC/timeline?rangeMode=quarters",
-      },
-    ],
-  },
-  {
-    title: "Séance 2 — Gestion de projet Agile",
-    bullets: [
-      "Utilisation d'outils Agile pour gérer les imprevus",
-      "Adaptation de la roadmap en fonction des retours clients...",
-      "Régularité des points d'équipe et ajustements",
-    ],
-    docs: [
-      {
-        label: "Diagramme de Gantt",
-        href: "https://projet-complexe.atlassian.net/jira/core/projects/PC/timeline?rangeMode=quarters",
-      },
-    ],
-  },
-  {
-    title: "Séance 2 — Qualité de la collaboration au sein de l'équipe",
-    bullets: [
-      "Parfois difficile de rester tous motivés et alignés sur les objectifs (emplois du temps chargés, priorités divergentes)...",
-      "Respect des rôles et responsabilités définis dans la charte",
-      "La régularité des points d'équipe aide à maintenir la cohésion et l'alignement",
-    ],
-    docs: [{ label: "Charte d'équipe", href: "/docs/charte.pdf" }],
-  },
-  {
-    title: "Séance 2 — Qualité de la collaboration avec le client",
-    bullets: [
-      "Communication régulière avec le client pour s'assurer que les attentes sont claires et alignées (quasiment hebdomadaire)...",
-      "Adaptation aux retours du client pour ajuster la direction du projet si nécessaire",
-      "Documentation claire et complète des décisions et changements pour éviter les malentendus",
-    ],
-    docs: [
-      {
-        label: "Document de spécification",
-        href: "https://docs.google.com/document/d/122tbkFqAHWpDlINRgwARYEx51BCakrfJhY-sCKDwulg/edit?tab=t.0",
-      },
-    ],
   },
   {
     title: "Conclusion",
@@ -239,7 +204,7 @@ function Slide({
         </header>
 
         <ul className="space-y-6 w-full max-w-3xl">
-          {data.bullets.map((item, idx) => (
+          {data.bullets?.map((item, idx) => (
             <li
               key={idx}
               className="bg-white/20 backdrop-blur-md p-6 rounded-2xl shadow-xl text-2xl font-semibold animate-fadeIn"
@@ -252,12 +217,22 @@ function Slide({
             </li>
           ))}
         </ul>
+        <div className="mt-8 w-full max-w-6xl">
+          {data.image && (
+            <img
+              src={data.image}
+              alt="Slide Image"
+              className="max-h-120 object-contain mx-auto animate-fadeIn"
+              style={{ animationDelay: `${data.bullets?.length! * 250}ms` }}
+            />
+          )}
+        </div>
       </div>
 
       {/* Documents et membres en bas */}
       <div className="flex justify-between items-center w-full bg-white py-6 pl-24 pr-12">
         <div className="flex gap-6 flex-wrap">
-          {data.docs.map((doc, idx) => (
+          {data.docs?.map((doc, idx) => (
             <DocButton key={idx} {...doc} />
           ))}
         </div>
@@ -278,35 +253,58 @@ const style = `
   to { opacity: 1; transform: translateY(0); }
 }
 .animate-fadeIn { opacity: 0; animation: fadeIn 0.6s ease forwards; }
-/* Couleur par défaut (slides 1 → 8) */
+/* Couleur par défaut (slides 1 → 2) */
 .swiper-pagination-bullet {
-  background-color: #1e40af; /* bleu IMT */
+  background-color: #ccc; /* bleu IMT */
   opacity: 0.5;
 }
 
-/* Slide active (1 → 8) */
+/* Slide active (1 → 2) */
 .swiper-pagination-bullet-active {
   opacity: 1;
 }
 
-/* À partir de la 9e slide */
-.swiper-pagination-bullet:nth-child(n + 9) {
+/* À partir de la 3e slide */
+.swiper-pagination-bullet:nth-child(n + 3) {
   background-color: #FFB7AB; /* bleu plus clair */
 }
 
-/* Active à partir de la 9e */
-.swiper-pagination-bullet:nth-child(n + 9).swiper-pagination-bullet-active {
+/* Active à partir de la 3e */
+.swiper-pagination-bullet:nth-child(n + 3).swiper-pagination-bullet-active {
   background-color: #FF2900; /* bleu plus soutenu */
   opacity: 1;
 }
-  /* À partir de la 14e slide */
-.swiper-pagination-bullet:nth-child(n + 14) {
-  background-color: #ccc; /* bleu plus clair */
+  /* À partir de la 5e slide */
+.swiper-pagination-bullet:nth-child(n + 5) {
+  background-color: #1e40af ; /* bleu plus clair */
+  opacity: 0.5;
 }
 
-/* Active à partir de la 14e */
-.swiper-pagination-bullet:nth-child(n + 14).swiper-pagination-bullet-active {
-  background-color: #000; /* bleu plus soutenu */
+/* Active à partir de la 5e */
+.swiper-pagination-bullet:nth-child(n + 5).swiper-pagination-bullet-active {
+  background-color: #1e40af; /* bleu plus soutenu */
+  opacity: 1;
+}
+    /* À partir de la 8e slide */
+.swiper-pagination-bullet:nth-child(n + 8) {
+  background-color: #008000 ; /* vert */
+  opacity: 0.5;
+}
+
+/* Active à partir de la 8e */
+.swiper-pagination-bullet:nth-child(n + 8).swiper-pagination-bullet-active {
+  background-color: #008000; /* vert */
+  opacity: 1;
+}
+      /* À partir de la 13e slide */
+.swiper-pagination-bullet:nth-child(n + 13) {
+  background-color: #FFA500 ; /* orange */
+  opacity: 0.5;
+}
+
+/* Active à partir de la 13e */
+.swiper-pagination-bullet:nth-child(n + 13).swiper-pagination-bullet-active {
+  background-color: #FFA500; /* orange */
   opacity: 1;
 }
 `;

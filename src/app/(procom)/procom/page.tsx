@@ -6,6 +6,14 @@ import { Network, DataSet } from "vis-network/standalone";
 import "vis-network/styles/vis-network.css";
 import { CircularProgress, Modal } from "@mui/joy";
 import CVEItem from "@/components/Item/CVEItem";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw"; // si tu veux autoriser HTML dans le Markdown
+import {
+  Prism as SyntaxHighlighter,
+  SyntaxHighlighterProps,
+} from "react-syntax-highlighter";
+import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
 
 /* =====================
    Types
@@ -100,6 +108,7 @@ type ASTResponse = {
       version: string;
     };
   };
+  ai_report?: string;
 };
 
 /* =====================
@@ -282,15 +291,40 @@ export default function Page() {
   const networkRef = useRef<Network | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingGenerateReport, setLoadingGenerateReport] = useState(false);
+  const [openModalAiReport, setOpenModalAiReport] = useState(false);
 
   const [files, setFiles] = useState<FileList | null>(null);
   const [selectedNode, setSelectedNode] = useState<FunctionNodeData | null>(
     null
   );
+  const [aiReport, setAiReport] = useState<ASTResponse["ai_report"] | null>(
+    null
+  );
   const [projectInfo, setProjectInfo] = useState<
     ASTResponse["cmake"]["project"] | null
   >(null);
-
+  const [nodes, setNodes] = useState<
+    {
+      id: string;
+      label: string;
+      color: string;
+      level: number;
+      data: FunctionNodeData;
+    }[]
+  >([]);
+  const [edges, setEdges] = useState<
+    {
+      id: string;
+      from: string;
+      to: string;
+      color: {
+        color: string;
+        highlight: string;
+        hover: string;
+      };
+    }[]
+  >([]);
   /* =====================
      Folder input
   ==================== */
@@ -314,6 +348,40 @@ export default function Page() {
   /* =====================
      Upload & analyze
   ==================== */
+
+  const handleGenerateAiReport = async () => {
+    if (!files) return;
+
+    setLoadingGenerateReport(true);
+
+    try {
+      const zip = new JSZip();
+      Array.from(files).forEach((file) =>
+        zip.file(file.webkitRelativePath || file.name, file)
+      );
+
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const formData = new FormData();
+      formData.append("project", zipBlob, "project.zip");
+      const res = await fetch(CLOUD_URL + "/llm_generate_report", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Failed to generate AI report");
+
+      const ast: ASTResponse = await res.json();
+
+      setAiReport(ast.ai_report);
+
+      console.log("AI Report Response:", ast);
+    } catch (err) {
+      console.error(err);
+      alert("Error generating AI report");
+    } finally {
+      setLoadingGenerateReport(false);
+    }
+  };
+
   const uploadAndAnalyzeProject = async () => {
     if (!files) return;
 
@@ -367,6 +435,9 @@ export default function Page() {
         idMap
       );
 
+      setNodes(nodes);
+      setEdges(edges);
+
       // Initialize vis-network
       if (containerRef.current) {
         networkRef.current = new Network(
@@ -416,20 +487,41 @@ export default function Page() {
           C/C++ CVE Vulnerability Detection
         </h1>
 
-        {/* Controls */}
-        <div className="flex flex-wrap gap-4 mb-6 items-center">
-          <label className="bg-zinc-800 px-4 py-2 rounded cursor-pointer hover:bg-zinc-700">
-            Select Project Folder
-            <input
-              ref={folderInputRef}
-              type="file"
-              multiple
-              className="hidden"
-              onChange={(e) =>
-                e.target.files && handleFolderSelect(e.target.files)
-              }
-            />
-          </label>
+        <div className="flex flex-row gap-4">
+          {/* Controls */}
+          <div className="flex flex-wrap gap-4 mb-6 items-center">
+            <label className="bg-zinc-800 px-4 py-2 rounded cursor-pointer hover:bg-zinc-700">
+              Select Project Folder
+              <input
+                ref={folderInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) =>
+                  e.target.files && handleFolderSelect(e.target.files)
+                }
+              />
+            </label>
+          </div>
+          {nodes.some((n) => n.data.status !== "safe") && !aiReport ? (
+            <div className="flex flex-wrap gap-4 mb-6 items-center">
+              <button
+                className="bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 px-4 py-2 rounded cursor-pointer hover:bg-zinc-700"
+                onClick={() => handleGenerateAiReport()}
+              >
+                Generate AI Report
+              </button>
+            </div>
+          ) : aiReport ? (
+            <div className="flex flex-wrap gap-4 mb-6 items-center">
+              <button
+                className="bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 px-4 py-2 rounded cursor-pointer hover:bg-zinc-700"
+                onClick={() => setOpenModalAiReport(true)}
+              >
+                Show AI Report
+              </button>
+            </div>
+          ) : null}
         </div>
 
         {/* Graph */}
@@ -437,7 +529,6 @@ export default function Page() {
           <div ref={containerRef} className="h-full w-full" />
         </div>
       </div>
-
       {/* Sidebar */}
       <div className="w-full md:w-96 border border-zinc-800 rounded p-4 flex flex-col gap-4">
         <h2 className="text-xl font-semibold">Project Info</h2>
@@ -474,6 +565,22 @@ export default function Page() {
                 {selectedNode.status}
               </span>
             </div>
+            {selectedNode.status === "potentially vulnerable" && (
+              <button
+                className="bg-zinc-800 px-3 py-1 rounded hover:bg-zinc-700"
+                onClick={() => {
+                  const query = `${selectedNode.dependency} ${selectedNode.version} vulnerability`;
+                  window.open(
+                    `https://www.google.com/search?q=${encodeURIComponent(
+                      query
+                    )}`,
+                    "_blank"
+                  );
+                }}
+              >
+                Search Vulnerabilities for {selectedNode.dependency}
+              </button>
+            )}
             <div>
               <strong>Called in:</strong>{" "}
               {selectedNode.files_used.map((f) => (
@@ -515,6 +622,108 @@ export default function Page() {
             <CircularProgress />
           </div>
           <p className="text-white text-lg">Analyzing project...</p>
+        </div>
+      </Modal>
+      <Modal
+        open={loadingGenerateReport}
+        sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+      >
+        <div className="bg-zinc-900/90 backdrop-blur-md rounded-lg p-6 flex flex-col items-center">
+          <div className="loader mb-4"></div>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              height: "100%",
+            }}
+          >
+            <CircularProgress />
+          </div>
+          <p className="text-white text-lg">Generating report...</p>
+        </div>
+      </Modal>
+      ; ;
+      <Modal
+        open={openModalAiReport}
+        onClose={() => setOpenModalAiReport(false)}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <div className="bg-zinc-900 text-white rounded-lg w-[90vw] max-w-6xl max-h-[90vh] flex flex-col shadow-xl">
+          {/* Header */}
+          <div className="flex justify-between items-center px-6 py-4 border-b border-zinc-700">
+            <h2 className="text-2xl font-semibold">AI Vulnerability Report</h2>
+            <button
+              onClick={() => setOpenModalAiReport(false)}
+              className="text-zinc-400 hover:text-white cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-y-auto px-8 py-6 prose prose-invert max-w-none">
+            {aiReport ? (
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm]}
+                components={{
+                  code({ node, className, children, ...props }) {
+                    // Si inline → <code> simple
+
+                    // Pour les blocks → SyntaxHighlighter
+                    const match = /language-(\w+)/.exec(className || "");
+                    const language = match ? match[1] : "text";
+
+                    return (
+                      <SyntaxHighlighter
+                        // TS casting safe
+                        {...(props as Partial<SyntaxHighlighterProps>)}
+                        language={language}
+                        style={oneDark}
+                        PreTag="div"
+                        wrapLines
+                        showLineNumbers
+                        lineNumberStyle={{ color: "#888", paddingRight: 10 }}
+                      >
+                        {String(children).replace(/\n$/, "")}
+                      </SyntaxHighlighter>
+                    );
+                  },
+                  table({ children }) {
+                    return (
+                      <table className="table-auto border-collapse border border-zinc-700 w-full">
+                        {children}
+                      </table>
+                    );
+                  },
+                  th({ children }) {
+                    return (
+                      <th className="border border-zinc-700 px-3 py-1 bg-zinc-800 text-left">
+                        {children}
+                      </th>
+                    );
+                  },
+                  td({ children }) {
+                    return (
+                      <td className="border border-zinc-700 px-3 py-1">
+                        {children}
+                      </td>
+                    );
+                  },
+                }}
+              >
+                {aiReport}
+              </ReactMarkdown>
+            ) : (
+              <div className="flex items-center justify-center h-full">
+                <CircularProgress />
+              </div>
+            )}
+          </div>
         </div>
       </Modal>
     </div>

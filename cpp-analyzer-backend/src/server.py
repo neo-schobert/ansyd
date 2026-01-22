@@ -10,6 +10,8 @@ from fastapi import FastAPI, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
+
+
 # =========================
 # Imports pipeline
 # =========================
@@ -18,7 +20,11 @@ from .cmake_extractor import extract_dependencies, serialize_cmake_info
 from .cve_checker import check_vulnerabilities, serialize_vulnerability_result
 from .ast_analyzer import analyze_files , serialize_call_graph
 from .cve_impact_analyzer import analyze_impact , serialize_impact
+from .openrouter_client import create_client
+from .vulnerability_report_generator import generate_report
 
+OPENROUTER_API_KEY = "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"
+MODEL_NAME = "deepseek/deepseek-chat"
 
 # =========================
 # Utils
@@ -60,7 +66,7 @@ def find_cmake(project_dir: Path) -> str | None:
 # =========================
 # Core analysis logic
 # =========================
-def analyze_cpp_project(project_dir: str) -> Dict:
+def analyze_cpp_project(project_dir: str, generate_ai_report: bool = False, project_name: str = None) -> Dict:
     project_dir = Path(project_dir)
 
     # -------- Step 1: CMake deps --------
@@ -104,6 +110,33 @@ def analyze_cpp_project(project_dir: str) -> Dict:
     # -------- Step 4: Impact analysis --------
     impact = analyze_impact(call_graph, vulnerabilities)
 
+
+    # ====================================================================
+    # Step 5: Generate AI-powered vulnerability assessment report
+    # ====================================================================
+    report = None
+    if generate_ai_report:
+        print("\n[6/6] Generating AI-powered vulnerability assessment report...")
+        
+
+        
+        # Create OpenRouter client
+        client = create_client(OPENROUTER_API_KEY, MODEL_NAME)
+        print(f"  Using model: {client.default_model}")
+        
+        # Generate report
+        report = generate_report(
+            exploit_db_info,
+            vulnerabilities,
+            call_graph,
+            impact,
+            client,
+            project_name
+        )
+        
+    
+        
+
     # -------- Result JSON --------
     return {
         "meta": {
@@ -119,6 +152,7 @@ def analyze_cpp_project(project_dir: str) -> Dict:
         "exploit_db": exploit_db_info,
         "call_graph": serialize_call_graph(call_graph),
         "impact": serialize_impact(impact),
+        "ai_report": report,
     }
 
 
@@ -155,6 +189,29 @@ async def analyze(project: UploadFile = File(...)):
                 zip_ref.extractall(tmpdir)
 
             result = analyze_cpp_project(tmpdir)
+            return JSONResponse(result)
+
+    except Exception as e:
+        traceback.print_exc()
+        return JSONResponse(
+            {"error": str(e)},
+            status_code=500,
+        )
+
+
+@app.post("/llm_generate_report")
+async def llm_generate_report(project: UploadFile = File(...)):
+    try:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            zip_path = os.path.join(tmpdir, "project.zip")
+
+            with open(zip_path, "wb") as f:
+                f.write(await project.read())
+
+            with zipfile.ZipFile(zip_path, "r") as zip_ref:
+                zip_ref.extractall(tmpdir)
+
+            result = analyze_cpp_project(tmpdir, generate_ai_report=True, project_name=project.filename)
             return JSONResponse(result)
 
     except Exception as e:

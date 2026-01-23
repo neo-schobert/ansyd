@@ -36,4 +36,4 @@ CMD ["uvicorn", "src.server:app", "--host", "0.0.0.0", "--port", "8000"]
 # docker tag cpp-analyzer-backend europe-west1-docker.pkg.dev/ansyd-lab/docker-backend/cpp-analyzer-backend:latest
 # docker push europe-west1-docker.pkg.dev/ansyd-lab/docker-backend/cpp-analyzer-backend:latest
 
-# gcloud run deploy cpp-analyzer-backend --image europe-west1-docker.pkg.dev/ansyd-lab/docker-backend/cpp-analyzer-backend:latest --region europe-west1 --platform managed --allow-unauthenticated --port 8000 --set-env-vars OPENROUTER_API_KEY="$(gcloud secrets versions access latest --secret=OPENROUTER_API_KEY)"
+# gcloud run deploy cpp-analyzer-backend --image europe-west1-docker.pkg.dev/ansyd-lab/docker-backend/cpp-analyzer-backend:latest --region europe-west1 --platform managed --allow-unauthenticated --port 8000 --set-env-vars OPENROUTER_API_KEY="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"

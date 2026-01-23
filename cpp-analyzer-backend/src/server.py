@@ -22,9 +22,20 @@ from .ast_analyzer import analyze_files , serialize_call_graph
 from .cve_impact_analyzer import analyze_impact , serialize_impact
 from .openrouter_client import create_client
 from .vulnerability_report_generator import generate_report
+from .config import OPENROUTER_API_KEY, MODEL_NAME
 
-OPENROUTER_API_KEY = "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"
-MODEL_NAME = "deepseek/deepseek-chat"
+if not OPENROUTER_API_KEY:
+    raise ValueError("OPENROUTER_API_KEY not set")
+
+if not MODEL_NAME:
+    raise ValueError("MODEL_NAME not set")
+
+# =========================
+# Variables Environment
+# =========================
+
+
+
 
 # =========================
 # Utils
@@ -121,9 +132,10 @@ def analyze_cpp_project(project_dir: str, generate_ai_report: bool = False, proj
 
         
         # Create OpenRouter client
+        print("OPENROUTER_API_KEY:", OPENROUTER_API_KEY)
+
         client = create_client(OPENROUTER_API_KEY, MODEL_NAME)
         print(f"  Using model: {client.default_model}")
-        
         # Generate report
         report = generate_report(
             exploit_db_info,

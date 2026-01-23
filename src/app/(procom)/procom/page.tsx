@@ -6,14 +6,7 @@ import { Network, DataSet } from "vis-network/standalone";
 import "vis-network/styles/vis-network.css";
 import { CircularProgress, Modal } from "@mui/joy";
 import CVEItem from "@/components/Item/CVEItem";
-import ReactMarkdown from "react-markdown";
-import remarkGfm from "remark-gfm";
-import rehypeRaw from "rehype-raw"; // si tu veux autoriser HTML dans le Markdown
-import {
-  Prism as SyntaxHighlighter,
-  SyntaxHighlighterProps,
-} from "react-syntax-highlighter";
-import { oneDark } from "react-syntax-highlighter/dist/esm/styles/prism";
+import AiReportModal from "@/components/Modal/AiReportModal";
 
 /* =====================
    Types
@@ -108,7 +101,7 @@ type ASTResponse = {
       version: string;
     };
   };
-  ai_report?: string;
+  ai_report: string;
 };
 
 /* =====================
@@ -643,89 +636,11 @@ export default function Page() {
           <p className="text-white text-lg">Generating report...</p>
         </div>
       </Modal>
-      ; ;
-      <Modal
-        open={openModalAiReport}
-        onClose={() => setOpenModalAiReport(false)}
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
-      >
-        <div className="bg-zinc-900 text-white rounded-lg w-[90vw] max-w-6xl max-h-[90vh] flex flex-col shadow-xl">
-          {/* Header */}
-          <div className="flex justify-between items-center px-6 py-4 border-b border-zinc-700">
-            <h2 className="text-2xl font-semibold">AI Vulnerability Report</h2>
-            <button
-              onClick={() => setOpenModalAiReport(false)}
-              className="text-zinc-400 hover:text-white cursor-pointer"
-            >
-              ✕
-            </button>
-          </div>
-
-          {/* Content */}
-          <div className="flex-1 overflow-y-auto px-8 py-6 prose prose-invert max-w-none">
-            {aiReport ? (
-              <ReactMarkdown
-                remarkPlugins={[remarkGfm]}
-                components={{
-                  code({ node, className, children, ...props }) {
-                    // Si inline → <code> simple
-
-                    // Pour les blocks → SyntaxHighlighter
-                    const match = /language-(\w+)/.exec(className || "");
-                    const language = match ? match[1] : "text";
-
-                    return (
-                      <SyntaxHighlighter
-                        // TS casting safe
-                        {...(props as Partial<SyntaxHighlighterProps>)}
-                        language={language}
-                        style={oneDark}
-                        PreTag="div"
-                        wrapLines
-                        showLineNumbers
-                        lineNumberStyle={{ color: "#888", paddingRight: 10 }}
-                      >
-                        {String(children).replace(/\n$/, "")}
-                      </SyntaxHighlighter>
-                    );
-                  },
-                  table({ children }) {
-                    return (
-                      <table className="table-auto border-collapse border border-zinc-700 w-full">
-                        {children}
-                      </table>
-                    );
-                  },
-                  th({ children }) {
-                    return (
-                      <th className="border border-zinc-700 px-3 py-1 bg-zinc-800 text-left">
-                        {children}
-                      </th>
-                    );
-                  },
-                  td({ children }) {
-                    return (
-                      <td className="border border-zinc-700 px-3 py-1">
-                        {children}
-                      </td>
-                    );
-                  },
-                }}
-              >
-                {aiReport}
-              </ReactMarkdown>
-            ) : (
-              <div className="flex items-center justify-center h-full">
-                <CircularProgress />
-              </div>
-            )}
-          </div>
-        </div>
-      </Modal>
+      <AiReportModal
+        openModalAiReport={openModalAiReport}
+        setOpenModalAiReport={setOpenModalAiReport}
+        aiReport={aiReport}
+      />
     </div>
   );
 }

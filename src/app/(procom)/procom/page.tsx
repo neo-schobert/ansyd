@@ -7,6 +7,7 @@ import "vis-network/styles/vis-network.css";
 import { CircularProgress, Modal } from "@mui/joy";
 import CVEItem from "@/components/Item/CVEItem";
 import AiReportModal from "@/components/Modal/AiReportModal";
+import DarkModeToggle from "@/components/Button/DarkModeToggle";
 
 /* =====================
    Types
@@ -286,7 +287,7 @@ export default function Page() {
   const [loading, setLoading] = useState(false);
   const [loadingGenerateReport, setLoadingGenerateReport] = useState(false);
   const [openModalAiReport, setOpenModalAiReport] = useState(false);
-
+  const [isDarkMode, setIsDarkMode] = useState(false);
   const [files, setFiles] = useState<FileList | null>(null);
   const [selectedNode, setSelectedNode] = useState<FunctionNodeData | null>(
     null
@@ -474,168 +475,222 @@ export default function Page() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white p-8 flex flex-col md:flex-row gap-6">
-      <div className="flex-1">
-        <h1 className="text-3xl font-bold mb-6">
+    <div
+      className={`min-h-screen p-8 flex flex-col md:flex-row gap-6 ${
+        isDarkMode ? "bg-zinc-950 text-white" : "bg-gray-100 text-gray-900"
+      }`}
+    >
+      {/* Main Content */}
+      <DarkModeToggle isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
+      <div className="flex-1 flex flex-col gap-6">
+        <h1 className="text-4xl font-extrabold mb-6 tracking-tight">
           C/C++ CVE Vulnerability Detection
         </h1>
 
-        <div className="flex flex-row gap-4">
-          {/* Controls */}
-          <div className="flex flex-wrap gap-4 mb-6 items-center">
-            <label className="bg-zinc-800 px-4 py-2 rounded cursor-pointer hover:bg-zinc-700">
-              Select Project Folder
-              <input
-                ref={folderInputRef}
-                type="file"
-                multiple
-                className="hidden"
-                onChange={(e) =>
-                  e.target.files && handleFolderSelect(e.target.files)
-                }
-              />
-            </label>
-          </div>
+        {/* Controls */}
+        <div className="flex flex-wrap gap-4 items-center">
+          <label
+            className={`px-5 py-2 rounded-lg cursor-pointer font-medium transition-colors ${
+              isDarkMode
+                ? "bg-zinc-800 hover:bg-zinc-700"
+                : "bg-gray-300 hover:bg-gray-200"
+            }`}
+          >
+            Select Project Folder
+            <input
+              ref={folderInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(e) =>
+                e.target.files && handleFolderSelect(e.target.files)
+              }
+            />
+          </label>
+
           {nodes.some((n) => n.data.status !== "safe") && !aiReport ? (
-            <div className="flex flex-wrap gap-4 mb-6 items-center">
-              <button
-                className="bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 px-4 py-2 rounded cursor-pointer hover:bg-zinc-700"
-                onClick={() => handleGenerateAiReport()}
-              >
-                Generate AI Report
-              </button>
-            </div>
+            <button
+              className="px-5 py-2 cursor-pointer rounded-lg font-semibold transition-all transform hover:scale-105 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 shadow-md hover:shadow-lg"
+              onClick={() => handleGenerateAiReport()}
+            >
+              Generate AI Report
+            </button>
           ) : aiReport ? (
-            <div className="flex flex-wrap gap-4 mb-6 items-center">
-              <button
-                className="bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 px-4 py-2 rounded cursor-pointer hover:bg-zinc-700"
-                onClick={() => setOpenModalAiReport(true)}
-              >
-                Show AI Report
-              </button>
-            </div>
+            <button
+              className="px-5 py-2 cursor-pointer rounded-lg font-semibold transition-all transform hover:scale-105 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 shadow-md hover:shadow-lg"
+              onClick={() => setOpenModalAiReport(true)}
+            >
+              Show AI Report
+            </button>
           ) : null}
         </div>
 
         {/* Graph */}
-        <div className="border border-zinc-800 rounded p-4 h-[700px]">
+        <div
+          className={`border rounded-xl p-4 h-[700px] ${
+            isDarkMode ? "border-zinc-800" : "border-gray-300 bg-white"
+          } shadow-inner`}
+        >
           <div ref={containerRef} className="h-full w-full" />
         </div>
       </div>
+
       {/* Sidebar */}
-      <div className="w-full md:w-96 border border-zinc-800 rounded p-4 flex flex-col gap-4">
-        <h2 className="text-xl font-semibold">Project Info</h2>
-        {projectInfo ? (
-          <div className="text-zinc-300 space-y-1">
-            <div>
-              <strong>Name:</strong> {projectInfo.name}
+      <div
+        className={`w-full md:w-96 mt-16 flex flex-col gap-6 p-5 rounded-xl border shadow-md ${
+          isDarkMode
+            ? "bg-zinc-900 border-zinc-800"
+            : "bg-white border-gray-300"
+        }`}
+      >
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Project Info</h2>
+          {projectInfo ? (
+            <div
+              className={`${
+                isDarkMode ? "text-zinc-300" : "text-zinc-700"
+              } space-y-1`}
+            >
+              <div>
+                <strong>Name:</strong> {projectInfo.name}
+              </div>
+              <div>
+                <strong>Version:</strong> {projectInfo.version}
+              </div>
+              <div>
+                <strong>C++ Standard:</strong> {projectInfo.cpp_standard}
+              </div>
+              <div>
+                <strong>CMake Version:</strong> {projectInfo.cmake_version}
+              </div>
             </div>
-            <div>
-              <strong>Version:</strong> {projectInfo.version}
-            </div>
-            <div>
-              <strong>C++ Standard:</strong> {projectInfo.cpp_standard}
-            </div>
-            <div>
-              <strong>CMake Version:</strong> {projectInfo.cmake_version}
-            </div>
-          </div>
-        ) : (
-          <p className="text-zinc-500">No project loaded</p>
-        )}
+          ) : (
+            <p className="text-zinc-500">No project loaded</p>
+          )}
+        </div>
 
-        <h2 className="text-xl font-semibold mt-4">Function Info</h2>
-        {selectedNode ? (
-          <div className="text-zinc-300 space-y-2">
-            <div>
-              <strong>Name:</strong> {selectedNode.name}
-            </div>
-            <div>
-              <strong style={{ color: nodeColor(selectedNode.status) }}>
-                Status:
-              </strong>{" "}
-              <span style={{ color: nodeColor(selectedNode.status) }}>
-                {selectedNode.status}
-              </span>
-            </div>
-            {selectedNode.status === "potentially vulnerable" && (
-              <button
-                className="bg-zinc-800 px-3 py-1 rounded hover:bg-zinc-700"
-                onClick={() => {
-                  const query = `${selectedNode.dependency} ${selectedNode.version} vulnerability`;
-                  window.open(
-                    `https://www.google.com/search?q=${encodeURIComponent(
-                      query
-                    )}`,
-                    "_blank"
-                  );
-                }}
-              >
-                Search Vulnerabilities for {selectedNode.dependency}
-              </button>
-            )}
-            <div>
-              <strong>Called in:</strong>{" "}
-              {selectedNode.files_used.map((f) => (
-                <div key={f}>- {f}</div>
-              ))}
-            </div>
+        <div>
+          <h2 className="text-xl font-semibold mb-2">Function Info</h2>
+          {selectedNode ? (
+            <div
+              className={`space-y-3 ${
+                isDarkMode ? "text-zinc-300" : "text-zinc-700"
+              }`}
+            >
+              <div>
+                <strong>Name:</strong> {selectedNode.name}
+              </div>
+              <div>
+                <strong>Status:</strong>{" "}
+                <span style={{ color: nodeColor(selectedNode.status) }}>
+                  {selectedNode.status}
+                </span>
+              </div>
 
-            {selectedNode.cves && selectedNode.cves.length > 0 && (
-              <>
+              {selectedNode.status === "potentially vulnerable" && (
+                <button
+                  className={`px-4 py-1 rounded-md cursor-pointer font-medium transition-colors ${
+                    isDarkMode
+                      ? "bg-zinc-800 hover:bg-zinc-700"
+                      : "bg-gray-200 hover:bg-gray-300"
+                  }`}
+                  onClick={() => {
+                    const query = `${selectedNode.dependency} ${selectedNode.version} vulnerability`;
+                    window.open(
+                      `https://www.google.com/search?q=${encodeURIComponent(
+                        query
+                      )}`,
+                      "_blank"
+                    );
+                  }}
+                >
+                  Search Vulnerabilities for {selectedNode.dependency}
+                </button>
+              )}
+
+              <div>
+                <strong>Called in:</strong>
+                {selectedNode.files_used.map((f) => (
+                  <div key={f}>- {f}</div>
+                ))}
+              </div>
+
+              {selectedNode.cves && selectedNode.cves.length > 0 && (
                 <div>
                   <strong>CVEs:</strong>
+                  <ul
+                    className={`list-inside ${
+                      isDarkMode ? "text-zinc-400" : "text-zinc-600"
+                    } space-y-1 mt-1`}
+                  >
+                    {selectedNode.cves.map((cve) => (
+                      <CVEItem key={cve.id} cve={cve} isDarkMode={isDarkMode} />
+                    ))}
+                  </ul>
                 </div>
-                <ul className="list-disc list-inside text-zinc-400">
-                  {selectedNode.cves.map((cve) => (
-                    <CVEItem key={cve.id} cve={cve} />
-                  ))}
-                </ul>
-              </>
-            )}
-          </div>
-        ) : (
-          <p className="text-zinc-500">Select a node to see details</p>
-        )}
+              )}
+            </div>
+          ) : (
+            <p className="text-zinc-500">No function selected</p>
+          )}
+        </div>
       </div>
+
+      {/* Loading Modals */}
       <Modal
         open={loading}
-        sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
       >
-        <div className="bg-zinc-900/90 backdrop-blur-md rounded-lg p-6 flex flex-col items-center">
+        <div
+          className={`p-6 rounded-2xl flex flex-col items-center ${
+            isDarkMode
+              ? "bg-zinc-900/90 backdrop-blur-md"
+              : "bg-white/90 backdrop-blur-sm"
+          } shadow-lg`}
+        >
           <div className="loader mb-4"></div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: "100%",
-            }}
+          <CircularProgress />
+          <p
+            className={`text-lg mt-3 ${
+              isDarkMode ? "text-zinc-300" : "text-zinc-700"
+            }`}
           >
-            <CircularProgress />
-          </div>
-          <p className="text-white text-lg">Analyzing project...</p>
+            Analyzing project...
+          </p>
         </div>
       </Modal>
+
       <Modal
         open={loadingGenerateReport}
-        sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
       >
-        <div className="bg-zinc-900/90 backdrop-blur-md rounded-lg p-6 flex flex-col items-center">
+        <div
+          className={`p-6 rounded-2xl flex flex-col items-center ${
+            isDarkMode
+              ? "bg-zinc-900/90 backdrop-blur-md"
+              : "bg-white/90 backdrop-blur-sm"
+          } shadow-lg`}
+        >
           <div className="loader mb-4"></div>
-          <div
-            style={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              height: "100%",
-            }}
+          <CircularProgress />
+          <p
+            className={`text-lg mt-3 ${
+              isDarkMode ? "text-zinc-300" : "text-zinc-700"
+            }`}
           >
-            <CircularProgress />
-          </div>
-          <p className="text-white text-lg">Generating report...</p>
+            Generating report...
+          </p>
         </div>
       </Modal>
+
       <AiReportModal
         openModalAiReport={openModalAiReport}
         setOpenModalAiReport={setOpenModalAiReport}

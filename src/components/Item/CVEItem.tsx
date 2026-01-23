@@ -2,7 +2,13 @@
 import { CVE } from "@/app/(procom)/procom/page";
 import { useState } from "react";
 
-export default function CVEItem({ cve }: { cve: CVE }) {
+export default function CVEItem({
+  cve,
+  isDarkMode,
+}: {
+  cve: CVE;
+  isDarkMode: boolean;
+}) {
   const [expanded, setExpanded] = useState(false);
 
   const MAX_CHARS = 30;
@@ -28,12 +34,12 @@ export default function CVEItem({ cve }: { cve: CVE }) {
   return (
     <li className="mb-2">
       <div>
-        <span className="font-mono">{cve.id}</span> –{" "}
+        • <span className="font-mono">{cve.id}</span> –{" "}
         <span style={{ color: severityColor }}>{cve.severity}</span> – CVSS:{" "}
         {cve.cvss}
       </div>
 
-      <div className="text-zinc-400">
+      <div className={`${isDarkMode ? "text-zinc-400" : "text-zinc-600"}`}>
         {text}
         {isLong && !expanded && "…"}
       </div>
@@ -41,7 +47,9 @@ export default function CVEItem({ cve }: { cve: CVE }) {
       {isLong && (
         <button
           onClick={() => setExpanded(!expanded)}
-          className="text-blue-400 hover:underline text-sm mt-1"
+          className={`text-blue-400 cursor-pointer hover:underline text-sm mt-1 ${
+            isDarkMode ? "text-blue-400" : "text-blue-600"
+          }`}
         >
           {expanded ? "Voir moins" : "Voir plus"}
         </button>

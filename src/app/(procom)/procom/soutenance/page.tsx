@@ -8,11 +8,41 @@ import "swiper/css/pagination";
 
 type DocLink = { label: string; href: string };
 type SlideData = {
-  title: string;
+  title?: string;
   subtitle?: string;
-  bullets?: string[];
+  bullets?: React.ReactElement[];
   docs?: DocLink[];
   image?: string;
+  isImageFullScreen?: boolean;
+  imageStyle?: string;
+};
+
+export const ObjectifsTable = (
+  objectifs: [string, "Terminé" | "En cours"][]
+) => {
+  return (
+    <div className="flex flex-col gap-2">
+      {objectifs.map(([objectif, etat], index) => {
+        const etatColor =
+          etat === "Terminé" ? "bg-green-600" : "bg-yellow-500 text-black";
+
+        return (
+          <div
+            key={index}
+            className="flex items-center justify-between border border-gray-700 bg-zinc-800 text-white rounded-xl shadow-md px-4 py-3 hover:scale-105 transition-transform"
+          >
+            <span className="flex-1 text-center">{objectif}</span>
+            <span className="border-l border-gray-600 mx-4 h-6"></span>
+            <span
+              className={`flex-1 text-center font-semibold px-2 py-1 rounded ${etatColor}`}
+            >
+              {etat}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
 };
 
 const slides: SlideData[] = [
@@ -21,32 +51,45 @@ const slides: SlideData[] = [
       "Automated common vulnerabilities and exposures detection (CVEs)  with Large language Models (LLMs)",
     subtitle: "Projet Complexe IMT Atlantique - Soutenance",
     bullets: [
-      "SCHOBERT Néo • AYOUBI Houcine • El AKRABA Othmane • IDRISSA Traoré",
+      <>SCHOBERT Néo • AYOUBI Houcine • El AKRABA Othmane • IDRISSA Traoré</>,
     ],
     docs: [],
     image: "/images/logoIMTA.png",
+    imageStyle: "max-h-40",
   },
   {
     title: "Plan de la présentation",
     bullets: [
-      "I - Contextualisation du projet",
-      "II - Choix Techniques",
-      "III - Avancement du projet et gestion des imprévus",
-      "IV - Résultats et perspectives",
+      <>I - Contextualisation du projet</>,
+      <>II - Choix Techniques</>,
+      <>III - Résultats, Avancement et Perspectives</>,
     ],
   },
   {
     title: "I - Contextualisation du projet",
     subtitle: "Contexte général",
     image: "/images/contexte general.png",
+    imageStyle: "max-h-150",
   },
   {
     title: "I - Contextualisation du projet",
     subtitle: "Reformulation du sujet",
     bullets: [
-      "Objectif principal : Développer un pipeline automatisé pour détecter les vulnérabilités logicielles (CVEs) en utilisant des modèles de langage avancés (LLMs)",
-      "Étapes clés : Extraction des dépendances, identification des CVEs, analyse structurelle du code, génération de visualisations et explications XAI",
-      "Technologies envisagées : Ollama pour l’exécution locale de LLMs, Unsloth pour le fine-tuning, outils d’analyse statique pour le code C/C++",
+      <>
+        Objectif principal : Développer un pipeline automatisé pour détecter les
+        vulnérabilités logicielles (CVEs) en utilisant des modèles de langage
+        avancés (LLMs)
+      </>,
+      <>
+        Étapes clés : Extraction des dépendances, identification des CVEs,
+        analyse structurelle du code, génération de visualisations et
+        explications XAI
+      </>,
+      <>
+        Technologies envisagées : Ollama pour l’exécution locale de LLMs,
+        Unsloth pour le fine-tuning, outils d’analyse statique pour le code
+        C/C++
+      </>,
     ],
     docs: [
       {
@@ -56,73 +99,26 @@ const slides: SlideData[] = [
     ],
   },
   {
-    title: "II - Choix Techniques",
-    subtitle: "Hypothèses",
-    bullets: [
-      // Hypothèses
-      "Hypothèses techniques : accès aux fichiers CMake et au code source C/C++, disponibilité des dépendances et versions correctes",
-      "Hypothèses organisationnelles : ressources matérielles suffisantes (GPU local, RAM, CPU) pour exécution des modèles IA et analyse des fichiers",
-      "Hypothèses sur les données : CVE publiques disponibles et à jour via NVD/NIST et OSV.dev, code source analysable",
-      "Hypothèses sur les modèles IA : possibilité d’exécution locale d’Ollama et fine-tuning avec Unsloth",
-    ],
-    docs: [],
+    image: "/images/hypotheses.jpeg",
+    isImageFullScreen: true,
   },
   {
-    title: "II - Choix Techniques",
-    subtitle: "Périmètre",
-    bullets: [
-      "Fonctionnalités incluses : extraction des dépendances, identification des CVE, analyse structurelle du code, construction du contexte d’appel, génération de visualisation et explications XAI",
-      "Fonctionnalités exclues : intégration continue complète, prédiction de vulnérabilités non référencées, remédiation automatique",
-      "Contraintes temporelles : démonstration complète du pipeline sur un projet représentatif, traitement limité à des fichiers de test et démonstration interactive",
-    ],
-    docs: [],
+    image: "/images/perimetre.jpeg",
+    isImageFullScreen: true,
   },
   {
     title: "II - Choix Techniques",
     subtitle: "Architecture du système",
     image: "/images/choix techniques.png",
+    imageStyle: "max-h-150",
   },
   {
-    title: "III - Avancement du projet et gestion des imprévus",
-    subtitle: "Évaluation des risques",
-    bullets: [
-      "Identification des risques majeurs techniques et organisationnels",
-      "Impact potentiel et probabilité",
-      "Stratégies de mitigation et plan de prévention",
-    ],
-    docs: [
-      {
-        label: "Évaluation des risques",
-        href: "/docs/evaluation-des-risques.jpeg",
-      },
-      {
-        label: "Évaluation des risques (au sein du groupe)",
-        href: "/procom/soutenance/risques-equipe",
-      },
-    ],
-  },
-  {
-    title: "III - Avancement du projet et gestion des imprévus",
-    subtitle: "Diagramme de Gantt",
-    bullets: [
-      "Planification initiale des tâches et jalons clés",
-      "Suivi de l’avancement et ajustements en fonction des imprévus",
-      "Suite du projet et prochaines étapes",
-    ],
-    docs: [
-      {
-        label: "Diagramme de Gantt",
-        href: "https://projet-complexe.atlassian.net/jira/core/projects/PC/timeline?rangeMode=quarters",
-      },
-    ],
-  },
-  {
-    title: "IV - Résultats et perspectives",
+    title: "III - Résultats, Avancement et Perspectives",
     subtitle: "Démonstration",
     bullets: [
-      "Présentation du pipeline automatisé pour la détection des CVEs",
-      "Exemples concrets d’analyse de projets C/C++",
-      "Visualisations générées et explications XAI",
+      <>Présentation du pipeline automatisé pour la détection des CVEs</>,
+      <>Exemples concrets d’analyse de projets C/C++</>,
+      <>Visualisations générées et explications XAI</>,
     ],
     docs: [
       {
@@ -131,24 +127,60 @@ const slides: SlideData[] = [
       },
     ],
   },
+
   {
-    title: "IV - Résultats et perspectives",
-    subtitle: "Perspectives",
-    bullets: [],
-    docs: [],
-  },
-  {
-    title: "Conclusion",
+    title: "III - Résultats, Avancement et Perspectives",
+    subtitle: "Avancement et Perspectives",
     bullets: [
-      "Cadrage initial solide et suivi rigoureux sont clés pour le succès d’un projet complexe.",
-      "Adaptabilité et communication efficace avec l’équipe et le client sont essentielles.",
-      "Outils Agile facilitent la gestion des imprévus et maintiennent l’alignement sur les objectifs.",
+      ObjectifsTable([
+        [
+          "Détection des bibliothèques vulnérables et leurs CVE associées",
+          "Terminé",
+        ],
+        ["Identification des fonctions vulnérables", "Terminé"],
+        ["Rédaction d’un rapport général", "Terminé"],
+        ["Mise en place de Métriques", "En cours"],
+        ["Rédaction d’un rapport ciblé", "En cours"],
+        ["Rédaction de tests", "En cours"],
+        ["Recommandation de solutions (optionnel)", "En cours"],
+      ]),
     ],
     docs: [],
   },
   {
+    title: "III - Résultats, Avancement et Perspectives",
+    subtitle: "Evaluation des Risques",
+    image: "/images/risques.png",
+    imageStyle: "max-h-150",
+  },
+  {
+    title: "III - Résultats, Avancement et Perspectives",
+    subtitle: "Pistes d'amélioration",
+    bullets: [
+      <>Tronquage du code concerné par la vulnérabilité</>,
+      <>Gain en précision sur le prompt donné aux LLMs</>,
+      <>Pourrait avoir un effets positifs dans le cadre des LLMs Locaux</>,
+    ],
+    docs: [
+      {
+        label: "Exemple de piste d'amélioration",
+        href: "https://www.canva.com/design/DAG_IVoBD_s/s9QQ8vv3JewfN0dHJ4TwMA/edit",
+      },
+    ],
+  },
+  {
+    title: "Conclusion",
+    bullets: [
+      <>Pipeline automatisé de détection de CVEs opérationnel</>,
+      <>Vulnérabilités identifiées avec visualisations explicatives</>,
+      <>Objectifs principaux atteints</>,
+      <>Perspectives : tests, métriques et automatisation supplémentaires</>,
+    ],
+    docs: [{ label: "Rapport final", href: "/docs/rapport_final.pdf" }],
+  },
+  {
     title: "Merci pour votre attention !",
-    bullets: ["Des questions ?"],
+    bullets: [<>Des questions ?</>],
     docs: [],
   },
 ];
@@ -191,8 +223,12 @@ function Slide({
       </div>
 
       {/* Contenu central */}
-      <div className="flex flex-col justify-center items-center text-center mt-32">
-        <header className="mb-12">
+      <div
+        className={`flex flex-col justify-start items-center text-center w-full ${
+          data.isImageFullScreen ? "mt-16" : "mt-32"
+        }`}
+      >
+        <header className={`${data.isImageFullScreen ? "mb-0" : "mb-12"}`}>
           <h1 className="text-5xl sm:text-6xl font-extrabold mb-4 drop-shadow-lg">
             {data.title}
           </h1>
@@ -217,16 +253,30 @@ function Slide({
             </li>
           ))}
         </ul>
-        <div className="mt-8 w-full max-w-6xl">
-          {data.image && (
+
+        {/* Image */}
+        {data.image && (
+          <div
+            className={`w-full flex justify-center items-center ${
+              data.isImageFullScreen ? "flex-1" : "mt-8"
+            }`}
+          >
             <img
               src={data.image}
               alt="Slide Image"
-              className="max-h-120 object-contain mx-auto animate-fadeIn"
-              style={{ animationDelay: `${data.bullets?.length! * 250}ms` }}
+              className={` h-full ${
+                data.isImageFullScreen
+                  ? " w-full object-contain mt-16 px-24"
+                  : "object-contain" + data.imageStyle
+                  ? data.imageStyle
+                  : " max-h-120"
+              } animate-fadeIn`}
+              style={{
+                animationDelay: `${(data.bullets?.length ?? 0) * 250}ms`,
+              }}
             />
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Documents et membres en bas */}
@@ -296,15 +346,15 @@ const style = `
   background-color: #008000; /* vert */
   opacity: 1;
 }
-      /* À partir de la 13e slide */
-.swiper-pagination-bullet:nth-child(n + 13) {
-  background-color: #FFA500 ; /* orange */
+      /* À partir de la 10e slide */
+.swiper-pagination-bullet:nth-child(n + 10) {
+  background-color: #ccc ; /* vert */
   opacity: 0.5;
 }
 
-/* Active à partir de la 13e */
-.swiper-pagination-bullet:nth-child(n + 13).swiper-pagination-bullet-active {
-  background-color: #FFA500; /* orange */
+/* Active à partir de la 10e */
+.swiper-pagination-bullet:nth-child(n + 10).swiper-pagination-bullet-active {
+  background-color: #ccc; /* vert */
   opacity: 1;
 }
 `;

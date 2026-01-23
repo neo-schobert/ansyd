@@ -11,6 +11,7 @@
 !.yarn/versions
 /go-backend
 /functions
+/cpp-analyzer-backend
 
 # testing
 /coverage

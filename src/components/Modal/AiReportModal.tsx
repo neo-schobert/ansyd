@@ -52,8 +52,6 @@ export default function AiReportModal({
               remarkPlugins={[remarkGfm]}
               components={{
                 code: ({ node, className, children, ...props }) => {
-                  const element = node as any; // Element de unist
-
                   // Inline code → <code> sans className de language
                   const isInline = !className?.includes("language-");
 

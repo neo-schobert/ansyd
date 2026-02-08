@@ -1,13 +1,20 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import JSZip from "jszip";
 import { Network, DataSet } from "vis-network/standalone";
 import "vis-network/styles/vis-network.css";
-import { CircularProgress, Modal } from "@mui/joy";
+import { CircularProgress, Modal, ModalClose } from "@mui/joy";
 import CVEItem from "@/components/Item/CVEItem";
 import AiReportModal from "@/components/Modal/AiReportModal";
 import DarkModeToggle from "@/components/Button/DarkModeToggle";
+import Hero from "@/components/Hero/Hero";
+declare module "react" {
+  interface InputHTMLAttributes<T> {
+    webkitdirectory?: boolean;
+    directory?: boolean;
+  }
+}
 
 /* =====================
    Types
@@ -19,261 +26,251 @@ export type CVE = {
   severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
   cvss: number;
   published_date: string;
+  exploit_db?: string;
+  affected_versions?: string;
 };
 
-type FunctionNodeData = {
-  id: string;
+export type ProjectInfos = {
+  name?: string;
+  version?: string;
+  standard?: string;
+  cmake?: CMake;
+  call_graph?: CallGraphNode;
+};
+
+export type CMake = {
+  dependencies: LibraryInfos[];
+};
+
+export type LibraryInfos = {
   name: string;
-  dependency: string;
-  files_used: string[];
+  vendor?: string;
   version: string;
-  status: "potentially vulnerable" | "safe" | "vulnerable";
-  cves?: CVE[];
+  source: string;
+  cves: CVE[];
+  git_repo?: string;
+  options: Record<string, string>;
+  checked_at?: string;
 };
 
-export type CallGraph = {
-  [functionName: string]: CallGraph;
+export type Location = {
+  file: string;
+  line: number;
+  column?: number;
 };
 
-type ASTResponse = {
-  call_graph: {
-    call_graph: CallGraph;
-    file_call_graphs: { [key: string]: { [key: string]: string[] } };
-    file_functions: { [key: string]: string[] };
-    functions: {
-      [key: string]: {
-        name: string;
-        files: string[];
-        line: number;
-        calls: { functions: string; line: number; column: number }[];
-      };
-    };
-  };
-  cmake: {
-    compiler_requirements: { compile_options: string[] };
-    dependencies: {
-      name: string;
-      version: string;
-      git_repo: string;
-      vendor: string;
-      source: string;
-    }[];
-    linked_libraries: string[];
-    project: {
-      name: string;
-      version: string;
-      cpp_standard: string;
-      cmake_version: string;
-    };
-    subdirectories: string[];
-  };
-  exploit_db: { [key: string]: string[] };
-  impact: {
-    direct: string[];
-    indirect: string[];
-    chains: { [key: string]: string[] };
-    counts: {
-      direct: number;
-      indirect: number;
-      functions: number;
-      libs: number;
-    };
-    vulnerable_functions: string[];
-    vulnerable_libs: string[];
-  };
-  meta: {
-    cpp_files: number;
-    dependencies: number;
-    cves: number;
-  };
-  vulnerabilities: {
-    [key: string]: {
-      checked_at: string;
-      cve_count: number;
-      cves: {
-        id: string;
-        severity: string;
-        cvss: number;
-        description: string;
-        published_date: string;
-      }[];
-      library: string;
-      max_severity: string;
-      version: string;
-    };
-  };
-  ai_report: string;
+export type CallGraphNode = {
+  id?: string;
+  func_name?: string;
+  locations: Location[];
+  library?: LibraryInfos | null;
+  children: CallGraphNode[];
+
+  extracted_code?: string;
+  ai_report?: string;
+  ai_vulnerability_score?: number;
+  global_report?: string;
+  global_score?: number;
+  critical_nodes?: CallGraphNode[];
 };
 
 /* =====================
-   Config
+   Helpers
 ===================== */
 
 const LOCAL_URL = "http://localhost:8000";
 const CLOUD_URL =
   "https://cpp-analyzer-backend-531057961347.europe-west1.run.app";
 
-/* =====================
-   Helpers
-===================== */
+const hasVulnerabilitiesRecursively = (
+  node: CallGraphNode,
+  memo = new WeakMap<CallGraphNode, boolean>(),
+): boolean => {
+  if (memo.has(node)) return memo.get(node)!;
 
-const nodeColor = (status: FunctionNodeData["status"]) => {
-  switch (status) {
-    case "safe":
-      return "#16a34a";
-    case "vulnerable":
-      return "#b91c1c";
-    case "potentially vulnerable":
-      return "#d97706";
-    default:
-      return "#6b7280";
+  const selfHasCves = (node.library?.cves?.length ?? 0) > 0;
+  const selfHasAiScore =
+    node.ai_vulnerability_score !== undefined &&
+    node.ai_vulnerability_score !== null;
+  const selfHasAiScoreGreaterThan2 = (node.ai_vulnerability_score ?? 10) >= 2;
+  if (selfHasCves && (!selfHasAiScore || selfHasAiScoreGreaterThan2)) {
+    memo.set(node, true);
+    return true;
   }
+
+  const childHasVulnerabilities =
+    node.children?.some((child) =>
+      hasVulnerabilitiesRecursively(child, memo),
+    ) ?? false;
+
+  memo.set(node, childHasVulnerabilities);
+  return childHasVulnerabilities;
 };
+
+const collectVulnerableDescendants = (
+  node: CallGraphNode,
+  result: Set<CallGraphNode> = new Set(),
+  visited: Set<CallGraphNode> = new Set(),
+): CallGraphNode[] => {
+  if (visited.has(node)) return [];
+  visited.add(node);
+
+  node.children?.forEach((child) => {
+    const hasVulnerabilities = (child.library?.cves?.length ?? 0) > 0;
+
+    if (hasVulnerabilities) {
+      result.add(child);
+    }
+
+    collectVulnerableDescendants(child, result, visited);
+  });
+
+  return Array.from(result);
+};
+
+const nodeColor = (node: CallGraphNode) => {
+  const hasOwnVulnerabilities = (node.library?.cves?.length ?? 0) > 0;
+  const hasDescendantVulnerability =
+    node.children?.some((child) => hasVulnerabilitiesRecursively(child)) ??
+    false;
+
+  if (hasOwnVulnerabilities) {
+    if (
+      node.ai_vulnerability_score === undefined ||
+      node.ai_vulnerability_score === null
+    ) {
+      return POTENTIALLY_VULNERABLE_COLOR;
+    } else {
+      if (node.ai_vulnerability_score >= 7) {
+        return "#dc2626"; // red-600
+      } else if (node.ai_vulnerability_score >= 2) {
+        return "#eab308"; // yellow-500
+      } else {
+        return "#22c55e"; // green-500
+      }
+    }
+  }
+
+  if (hasDescendantVulnerability) {
+    return VULNERABLE_BY_DESCENDANT_COLOR;
+  }
+
+  return SAFE_COLOR;
+};
+
+const nodeText = (node: CallGraphNode) => {
+  const hasOwnVulnerabilities = (node.library?.cves?.length ?? 0) > 0;
+  const hasDescendantVulnerability =
+    node.children?.some((child) => hasVulnerabilitiesRecursively(child)) ??
+    false;
+
+  if (hasOwnVulnerabilities) {
+    if (
+      node.ai_vulnerability_score === undefined ||
+      node.ai_vulnerability_score === null
+    ) {
+      return "Potentially Vulnerable";
+    } else {
+      if (node.ai_vulnerability_score >= 7) {
+        return "Potentially Vulnerable (High Risk)";
+      } else if (node.ai_vulnerability_score >= 2) {
+        return "Potentially Vulnerable (Medium Risk)";
+      } else {
+        return "Potentially Vulnerable (Low Risk)";
+      }
+    }
+  }
+
+  if (hasDescendantVulnerability) {
+    return "Potentially Vulnerable by Descendant";
+  }
+
+  return "Safe";
+};
+
+const VULNERABLE_BY_DESCENDANT_COLOR = "#fecc76";
+const POTENTIALLY_VULNERABLE_COLOR = "#d97706";
+const SAFE_COLOR = "#16a34a";
 
 /* =====================
    Recursive CallGraph Traversal
 ===================== */
 
-function buildGraphFromCallGraph(
-  graph: CallGraph,
-  ast: ASTResponse,
+function buildGraph(
+  node: CallGraphNode,
   nodes: {
     id: string;
     label: string;
     color: string;
     level: number;
-    data: FunctionNodeData;
+    data: CallGraphNode;
   }[],
   edges: {
+    id: string;
     from: string;
     to: string;
-    color: {
-      color: string;
-      highlight: string;
-      hover: string;
-    };
+    color: { color: string; highlight: string; hover: string };
   }[],
-  idMap: Record<string, string>,
-  parent?: string,
-  level: number = 0
+  nodeMap: Map<string, string> = new Map(), // clé = func_name + locations
+  parentId?: string,
+  level: number = 0,
 ) {
-  Object.entries(graph).forEach(([funcName, children]) => {
-    // Si le nœud n'existe pas encore, on le crée
-    if (!idMap[funcName]) {
-      const funcVulnInfo = Object.values(ast.vulnerabilities).find((lib) =>
-        lib.cves.some((cve) =>
-          Object.values(ast.impact.chains).some((chain) =>
-            chain.includes(funcName)
-          )
-        )
-      );
+  if (!node.func_name) node.func_name = "anonymous"; // fallback
 
-      const status: FunctionNodeData["status"] = Object.values(
-        ast.impact.chains
-      ).some((chain) => chain.includes(funcName))
-        ? "potentially vulnerable"
-        : "safe";
+  // Crée une clé unique basée sur le nom et les locations
+  const locKey = node.locations
+    .map((l) => `${l.file}:${l.line}:${l.column ?? 0}`)
+    .sort()
+    .join("|"); // tri pour que l'ordre n'importe pas
+  const nodeKey = `${node.func_name}_${locKey}`;
 
-      const cves: CVE[] | undefined = funcVulnInfo
-        ? funcVulnInfo.cves.map((cve) => ({
-            id: cve.id,
-            description: cve.description,
-            severity: cve.severity as CVE["severity"],
-            cvss: cve.cvss,
-            published_date: cve.published_date,
-          }))
-        : undefined;
+  let nodeId: string;
 
-      const uniqueId = `node-${Object.keys(idMap).length}`;
-      idMap[funcName] = uniqueId;
+  if (nodeMap.has(nodeKey)) {
+    nodeId = nodeMap.get(nodeKey)!;
 
-      nodes.push({
-        id: uniqueId,
-        label: funcName,
-        color: nodeColor(status),
-        level, // ← niveau pour Vis Network
-        data: {
-          id: uniqueId,
-          name: funcName,
-          dependency: funcVulnInfo
-            ? funcVulnInfo.library
-            : "potentially vulnerable",
-          version: funcVulnInfo
-            ? funcVulnInfo.version
-            : "potentially vulnerable",
-          status,
-          cves,
-          files_used: ast.call_graph.functions[funcName]?.files
-            ? ast.call_graph.functions[funcName].files.map((f) =>
-                f
-                  .split("/")
-                  .filter((v, i) => i > 3)
-                  .join("/")
-              )
-            : Object.keys(ast.call_graph.file_call_graphs)
-                .filter((file) =>
-                  Object.values(ast.call_graph.file_call_graphs[file]).some(
-                    (chain) => chain.includes(funcName)
-                  )
-                )
-                .map((f) =>
-                  f
-                    .split("/")
-                    .filter((v, i) => i > 3)
-                    .join("/")
-                ),
-        } as FunctionNodeData,
-      });
-    } else {
-      // Si le nœud existe déjà, mettre à jour le niveau si nécessaire
-      const node = nodes.find((n) => n.id === idMap[funcName]);
-      if (node && level < node.level) {
-        node.level = level;
-      }
-    }
-
-    // Crée une arête depuis le parent si existant
-    if (parent && parent !== funcName) {
+    if (parentId) {
       edges.push({
-        from: idMap[parent],
-        to: idMap[funcName],
+        id: `edge-${edges.length}`,
+        from: parentId,
+        to: nodeId,
         color: {
-          color: nodeColor(
-            Object.values(ast.impact.chains).some((chain) =>
-              chain.includes(funcName)
-            )
-              ? "potentially vulnerable"
-              : "safe"
-          ),
-          highlight: nodeColor(
-            Object.values(ast.impact.chains).some((chain) =>
-              chain.includes(funcName)
-            )
-              ? "potentially vulnerable"
-              : "safe"
-          ),
-          hover: nodeColor(
-            Object.values(ast.impact.chains).some((chain) =>
-              chain.includes(funcName)
-            )
-              ? "potentially vulnerable"
-              : "safe"
-          ),
+          color: nodeColor(node),
+          highlight: nodeColor(node),
+          hover: nodeColor(node),
+        },
+      });
+    }
+  } else {
+    nodeId = `node-${nodes.length}`;
+    nodeMap.set(nodeKey, nodeId);
+    node.id = nodeId;
+    nodes.push({
+      id: nodeId,
+      label: node.func_name,
+      color: nodeColor(node),
+      level,
+      data: node,
+    });
+
+    if (parentId) {
+      edges.push({
+        id: `edge-${edges.length}`,
+        from: parentId,
+        to: nodeId,
+        color: {
+          color: nodeColor(node),
+          highlight: nodeColor(node),
+          hover: nodeColor(node),
         },
       });
     }
 
-    // Récursion sur les sous-fonctions
-    buildGraphFromCallGraph(
-      children,
-      ast,
-      nodes,
-      edges,
-      idMap,
-      funcName,
-      level + 1
+    // Recursion sur les enfants
+    node.children.forEach((child) =>
+      buildGraph(child, nodes, edges, nodeMap, nodeId, level + 1),
     );
-  });
+  }
 }
 
 /* =====================
@@ -282,29 +279,23 @@ function buildGraphFromCallGraph(
 
 export default function Page() {
   const folderInputRef = useRef<HTMLInputElement>(null);
-  const networkRef = useRef<Network | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const networkRef = useRef<Network | null>(null);
+
+  const [files, setFiles] = useState<FileList | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingGenerateReport, setLoadingGenerateReport] = useState(false);
-  const [openModalAiReport, setOpenModalAiReport] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [files, setFiles] = useState<FileList | null>(null);
-  const [selectedNode, setSelectedNode] = useState<FunctionNodeData | null>(
-    null
-  );
-  const [aiReport, setAiReport] = useState<ASTResponse["ai_report"] | null>(
-    null
-  );
-  const [projectInfo, setProjectInfo] = useState<
-    ASTResponse["cmake"]["project"] | null
-  >(null);
+  const [openModalAiReport, setOpenModalAiReport] = useState(false);
+  const [showAiReport, setShowAiReport] = useState<CallGraphNode | null>(null);
+  const [projectInfo, setProjectInfo] = useState<ProjectInfos | null>(null);
   const [nodes, setNodes] = useState<
     {
       id: string;
       label: string;
       color: string;
       level: number;
-      data: FunctionNodeData;
+      data: CallGraphNode;
     }[]
   >([]);
   const [edges, setEdges] = useState<
@@ -312,16 +303,12 @@ export default function Page() {
       id: string;
       from: string;
       to: string;
-      color: {
-        color: string;
-        highlight: string;
-        hover: string;
-      };
+      color: { color: string; highlight: string; hover: string };
     }[]
   >([]);
-  /* =====================
-     Folder input
-  ==================== */
+  const [selectedNode, setSelectedNode] = useState<CallGraphNode | null>(null);
+  const [openSelectFolderModal, setOpenSelectFolderModal] = useState(false);
+
   useEffect(() => {
     if (folderInputRef.current) {
       folderInputRef.current.setAttribute("webkitdirectory", "");
@@ -329,114 +316,50 @@ export default function Page() {
     }
   }, []);
 
-  const handleFolderSelect = (fileList: FileList) => {
-    setFiles(fileList);
-  };
-
   useEffect(() => {
-    if (files) {
-      uploadAndAnalyzeProject();
-    }
+    if (files) uploadAndAnalyzeProject();
   }, [files]);
 
-  /* =====================
-     Upload & analyze
-  ==================== */
-
-  const handleGenerateAiReport = async () => {
-    if (!files) return;
-
-    setLoadingGenerateReport(true);
-
-    try {
-      const zip = new JSZip();
-      Array.from(files).forEach((file) =>
-        zip.file(file.webkitRelativePath || file.name, file)
-      );
-
-      const zipBlob = await zip.generateAsync({ type: "blob" });
-      const formData = new FormData();
-      formData.append("project", zipBlob, "project.zip");
-      const res = await fetch(CLOUD_URL + "/llm_generate_report", {
-        method: "POST",
-        body: formData,
-      });
-      if (!res.ok) throw new Error("Failed to generate AI report");
-
-      const ast: ASTResponse = await res.json();
-
-      setAiReport(ast.ai_report);
-
-      console.log("AI Report Response:", ast);
-    } catch (err) {
-      console.error(err);
-      alert("Error generating AI report");
-    } finally {
-      setLoadingGenerateReport(false);
-    }
-  };
+  const handleFolderSelect = (fileList: FileList) => setFiles(fileList);
 
   const uploadAndAnalyzeProject = async () => {
     if (!files) return;
-
     setLoading(true);
 
     try {
+      setOpenSelectFolderModal(false);
       const zip = new JSZip();
       Array.from(files).forEach((file) =>
-        zip.file(file.webkitRelativePath || file.name, file)
+        zip.file(file.webkitRelativePath || file.name, file),
       );
-
       const zipBlob = await zip.generateAsync({ type: "blob" });
       const formData = new FormData();
       formData.append("project", zipBlob, "project.zip");
 
-      const res = await fetch(CLOUD_URL + "/analyze", {
+      const res = await fetch(`${CLOUD_URL}/analyze`, {
         method: "POST",
         body: formData,
       });
       if (!res.ok) throw new Error("Failed to analyze project");
 
-      const ast: ASTResponse = await res.json();
-      console.log("AST Response:", ast);
-      setProjectInfo(ast.cmake.project);
+      const project: ProjectInfos = await res.json();
+      setProjectInfo(project);
 
-      // Build nodes & edges from recursive call graph
-      const nodes: {
-        id: string;
-        label: string;
-        color: string;
-        level: number;
-        data: FunctionNodeData;
-      }[] = [];
-      const edges: {
-        id: string;
-        from: string;
-        to: string;
-        color: {
-          color: string;
-          highlight: string;
-          hover: string;
-        };
-      }[] = [];
-      const idMap: Record<string, string> = {};
+      // Build graph
+      const graphNodes: typeof nodes = [];
+      const graphEdges: typeof edges = [];
 
-      buildGraphFromCallGraph(
-        ast.call_graph.call_graph,
-        ast,
-        nodes,
-        edges,
-        idMap
-      );
+      if (project.call_graph) {
+        buildGraph(project.call_graph, graphNodes, graphEdges);
+      }
 
-      setNodes(nodes);
-      setEdges(edges);
+      setNodes(graphNodes);
+      setEdges(graphEdges);
 
-      // Initialize vis-network
       if (containerRef.current) {
         networkRef.current = new Network(
           containerRef.current,
-          { nodes: new DataSet(nodes), edges: new DataSet(edges) },
+          { nodes: new DataSet(graphNodes), edges: new DataSet(graphEdges) },
           {
             layout: {
               hierarchical: {
@@ -458,43 +381,126 @@ export default function Page() {
               arrows: { from: true },
             },
             physics: false, // pour ne pas que la physique modifie le layout
-          }
+          },
         );
 
         networkRef.current.on("selectNode", (params) => {
           const nodeId = params.nodes[0];
-          const node = nodes.find((n) => n.id === nodeId);
-          if (node) setSelectedNode(node.data as FunctionNodeData);
+          const node = graphNodes.find((n) => n.id === nodeId);
+          if (node) setSelectedNode(node.data);
         });
       }
-      setLoading(false);
     } catch (err) {
       console.error(err);
       alert("Error analyzing project");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleGenerateAiReport = async (selectedNode?: CallGraphNode) => {
+    if (!files) return;
+    setLoadingGenerateReport(true);
+    try {
+      const zip = new JSZip();
+      Array.from(files).forEach((file) =>
+        zip.file(file.webkitRelativePath || file.name, file),
+      );
+      const zipBlob = await zip.generateAsync({ type: "blob" });
+      const formData = new FormData();
+      formData.append("project", zipBlob, "project.zip");
+      formData.append("projectInfos", JSON.stringify(projectInfo || {}));
+      if (selectedNode) {
+        formData.append("selectedNode", JSON.stringify(selectedNode));
+      }
+      const res = await fetch(CLOUD_URL + "/llm_generate_report", {
+        method: "POST",
+        body: formData,
+      });
+      if (!res.ok) throw new Error("Failed to analyze project");
+
+      const project: ProjectInfos = await res.json();
+      setProjectInfo(project);
+
+      // Build graph
+      const graphNodes: typeof nodes = [];
+      const graphEdges: typeof edges = [];
+
+      if (project.call_graph) {
+        buildGraph(project.call_graph, graphNodes, graphEdges);
+      }
+
+      setNodes(graphNodes);
+      setEdges(graphEdges);
+
+      if (!selectedNode) {
+        setOpenModalAiReport(true);
+      }
+      setSelectedNode(null);
+
+      if (containerRef.current) {
+        networkRef.current = new Network(
+          containerRef.current,
+          { nodes: new DataSet(graphNodes), edges: new DataSet(graphEdges) },
+          {
+            layout: {
+              hierarchical: {
+                enabled: true,
+                direction: "UD", // "LR" = gauche-droite, "UD" = haut-bas
+                sortMethod: "directed",
+                levelSeparation: 150,
+                nodeSpacing: 200,
+                treeSpacing: 250,
+              },
+            },
+            edges: {
+              smooth: {
+                enabled: true, // ✅ obligatoire
+                type: "cubicBezier",
+                forceDirection: true,
+                roundness: 0.4,
+              },
+              arrows: { from: true },
+            },
+            physics: false, // pour ne pas que la physique modifie le layout
+          },
+        );
+
+        networkRef.current.on("selectNode", (params) => {
+          const nodeId = params.nodes[0];
+          const node = graphNodes.find((n) => n.id === nodeId);
+          if (node) setSelectedNode(node.data);
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error generating AI report");
+    } finally {
+      setLoadingGenerateReport(false);
+    }
+  };
+
+  const unwrapMarkdownBlock = (text: string) => {
+    const match = text.match(/```markdown\s*([\s\S]*?)\s*```/i);
+    return match ? match[1] : text;
   };
 
   return (
     <div
-      className={`min-h-screen p-8 flex flex-col md:flex-row gap-6 ${
-        isDarkMode ? "bg-zinc-950 text-white" : "bg-gray-100 text-gray-900"
-      }`}
+      className={`min-h-screen p-8 flex flex-col md:flex-row gap-6 ${isDarkMode ? "bg-zinc-950 text-white" : "bg-gray-100 text-gray-900"}`}
     >
-      {/* Main Content */}
       <DarkModeToggle isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
+
+      {/* Main Content */}
       <div className="flex-1 flex flex-col gap-6">
         <h1 className="text-4xl font-extrabold mb-6 tracking-tight">
           C/C++ CVE Vulnerability Detection
         </h1>
 
-        {/* Controls */}
         <div className="flex flex-wrap gap-4 items-center">
-          <label
-            className={`px-5 py-2 rounded-lg cursor-pointer font-medium transition-colors ${
-              isDarkMode
-                ? "bg-zinc-800 hover:bg-zinc-700"
-                : "bg-gray-300 hover:bg-gray-200"
-            }`}
+          <button
+            onClick={() => setOpenSelectFolderModal(true)}
+            className={`px-5 py-2 rounded-lg cursor-pointer font-medium transition-colors ${isDarkMode ? "bg-zinc-800 hover:bg-zinc-700" : "bg-gray-300 hover:bg-gray-200"}`}
           >
             Select Project Folder
             <input
@@ -506,30 +512,30 @@ export default function Page() {
                 e.target.files && handleFolderSelect(e.target.files)
               }
             />
-          </label>
+          </button>
 
-          {nodes.some((n) => n.data.status !== "safe") && !aiReport ? (
+          {nodes.some((n) => n.data.library?.cves?.length !== 0) &&
+            !projectInfo?.call_graph?.global_report && (
+              <button
+                className="px-5 py-2 rounded-lg cursor-pointer font-semibold bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 shadow-md hover:scale-105"
+                onClick={() => handleGenerateAiReport()}
+              >
+                Generate Global AI Report
+              </button>
+            )}
+
+          {projectInfo?.call_graph?.global_report && (
             <button
-              className="px-5 py-2 cursor-pointer rounded-lg font-semibold transition-all transform hover:scale-105 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 shadow-md hover:shadow-lg"
-              onClick={() => handleGenerateAiReport()}
-            >
-              Generate AI Report
-            </button>
-          ) : aiReport ? (
-            <button
-              className="px-5 py-2 cursor-pointer rounded-lg font-semibold transition-all transform hover:scale-105 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 shadow-md hover:shadow-lg"
+              className="px-5 py-2 rounded-lg cursor-pointer font-semibold bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 shadow-md hover:scale-105"
               onClick={() => setOpenModalAiReport(true)}
             >
               Show AI Report
             </button>
-          ) : null}
+          )}
         </div>
 
-        {/* Graph */}
         <div
-          className={`border rounded-xl p-4 h-[700px] ${
-            isDarkMode ? "border-zinc-800" : "border-gray-300 bg-white"
-          } shadow-inner`}
+          className={`border rounded-xl p-4 h-[700px] ${isDarkMode ? "border-zinc-800" : "border-gray-300 bg-white"} shadow-inner`}
         >
           <div ref={containerRef} className="h-full w-full" />
         </div>
@@ -537,31 +543,23 @@ export default function Page() {
 
       {/* Sidebar */}
       <div
-        className={`w-full md:w-96 mt-16 flex flex-col gap-6 p-5 rounded-xl border shadow-md ${
-          isDarkMode
-            ? "bg-zinc-900 border-zinc-800"
-            : "bg-white border-gray-300"
-        }`}
+        className={`w-full md:w-96 mt-16 flex flex-col gap-6 p-5 rounded-xl border shadow-md ${isDarkMode ? "bg-zinc-900 border-zinc-800" : "bg-white border-gray-300"}`}
       >
         <div>
           <h2 className="text-xl font-semibold mb-2">Project Info</h2>
           {projectInfo ? (
             <div
-              className={`${
-                isDarkMode ? "text-zinc-300" : "text-zinc-700"
-              } space-y-1`}
+              className={
+                isDarkMode
+                  ? "text-zinc-300 space-y-1"
+                  : "text-zinc-700 space-y-1"
+              }
             >
               <div>
                 <strong>Name:</strong> {projectInfo.name}
               </div>
               <div>
                 <strong>Version:</strong> {projectInfo.version}
-              </div>
-              <div>
-                <strong>C++ Standard:</strong> {projectInfo.cpp_standard}
-              </div>
-              <div>
-                <strong>CMake Version:</strong> {projectInfo.cmake_version}
               </div>
             </div>
           ) : (
@@ -573,62 +571,180 @@ export default function Page() {
           <h2 className="text-xl font-semibold mb-2">Function Info</h2>
           {selectedNode ? (
             <div
-              className={`space-y-3 ${
-                isDarkMode ? "text-zinc-300" : "text-zinc-700"
-              }`}
+              className={
+                isDarkMode
+                  ? "text-zinc-300 space-y-3"
+                  : "text-zinc-700 space-y-3"
+              }
             >
               <div>
-                <strong>Name:</strong> {selectedNode.name}
+                <strong>Name:</strong> {selectedNode.func_name}
               </div>
+              {selectedNode.library ? (
+                <div>
+                  <strong>Librairie Associée:</strong>{" "}
+                  <span
+                    onClick={() =>
+                      window.open(selectedNode.library?.git_repo, "_blank")
+                    }
+                    className="cursor-pointer hover:underline"
+                  >
+                    {selectedNode.library?.name}{" "}
+                  </span>
+                </div>
+              ) : (
+                <div>
+                  <strong>Librairie Associée:</strong>{" "}
+                  <span>Aucune (ou std)</span>
+                </div>
+              )}
+              {selectedNode.library?.version && (
+                <div>
+                  <strong>Version:</strong>{" "}
+                  <span>
+                    {selectedNode.library?.version &&
+                      `${selectedNode.library.version}`}
+                  </span>
+                </div>
+              )}
               <div>
                 <strong>Status:</strong>{" "}
-                <span style={{ color: nodeColor(selectedNode.status) }}>
-                  {selectedNode.status}
-                </span>
-              </div>
-
-              {selectedNode.status === "potentially vulnerable" && (
-                <button
-                  className={`px-4 py-1 rounded-md cursor-pointer font-medium transition-colors ${
-                    isDarkMode
-                      ? "bg-zinc-800 hover:bg-zinc-700"
-                      : "bg-gray-200 hover:bg-gray-300"
-                  }`}
-                  onClick={() => {
-                    const query = `${selectedNode.dependency} ${selectedNode.version} vulnerability`;
-                    window.open(
-                      `https://www.google.com/search?q=${encodeURIComponent(
-                        query
-                      )}`,
-                      "_blank"
-                    );
+                <span
+                  style={{
+                    color: nodeColor(selectedNode),
                   }}
                 >
-                  Search Vulnerabilities for {selectedNode.dependency}
-                </button>
-              )}
-
-              <div>
-                <strong>Called in:</strong>
-                {selectedNode.files_used.map((f) => (
-                  <div key={f}>- {f}</div>
-                ))}
+                  {nodeText(selectedNode)}
+                </span>
               </div>
+              {selectedNode.ai_vulnerability_score !== undefined &&
+                selectedNode.ai_vulnerability_score !== null && (
+                  <div
+                    className={`px-3 py-1 text-center rounded-full text-sm font-medium ${
+                      isDarkMode
+                        ? selectedNode.ai_vulnerability_score >= 7
+                          ? "bg-red-700 text-red-100"
+                          : selectedNode.ai_vulnerability_score >= 4
+                            ? "bg-yellow-700 text-yellow-100"
+                            : "bg-green-700 text-green-100"
+                        : selectedNode.ai_vulnerability_score >= 7
+                          ? "bg-red-100 text-red-800"
+                          : selectedNode.ai_vulnerability_score >= 4
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-green-100 text-green-800"
+                    }`}
+                  >
+                    AI Score: {selectedNode.ai_vulnerability_score?.toFixed(1)}{" "}
+                    / 10
+                  </div>
+                )}
 
-              {selectedNode.cves && selectedNode.cves.length > 0 && (
+              {selectedNode.library?.cves &&
+              selectedNode.library?.cves?.length > 0 ? (
+                selectedNode.ai_report ? (
+                  <button
+                    className="px-2 py-1 rounded-lg text-sm cursor-pointer font-semibold bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 shadow-md hover:scale-105"
+                    onClick={() => setShowAiReport(selectedNode)}
+                  >
+                    Show AI Report
+                  </button>
+                ) : (
+                  <button
+                    className="px-2 py-1 rounded-lg text-sm cursor-pointer font-semibold bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 shadow-md hover:scale-105"
+                    onClick={() => handleGenerateAiReport(selectedNode)}
+                  >
+                    Analyze with AI
+                  </button>
+                )
+              ) : collectVulnerableDescendants(selectedNode).length > 0 ? (
                 <div>
-                  <strong>CVEs:</strong>
+                  <strong>Vulnerable Descendants:</strong>
                   <ul
                     className={`list-inside ${
                       isDarkMode ? "text-zinc-400" : "text-zinc-600"
                     } space-y-1 mt-1`}
                   >
-                    {selectedNode.cves.map((cve) => (
-                      <CVEItem key={cve.id} cve={cve} isDarkMode={isDarkMode} />
+                    {collectVulnerableDescendants(selectedNode).map((child) => (
+                      <li
+                        key={
+                          child.func_name +
+                          child.locations
+                            .map((l) => `${l.file}:${l.line}:${l.column ?? 0}`)
+                            .join("|")
+                        }
+                        className="flex items-center justify-between gap-2"
+                      >
+                        <span>{child.func_name}</span>
+
+                        <button
+                          className={`text-xs cursor-pointer px-2 py-0.5 rounded-md font-medium transition-colors ${
+                            isDarkMode
+                              ? "bg-zinc-800 text-zinc-300 hover:bg-zinc-700"
+                              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                          }`}
+                          onClick={() => {
+                            setSelectedNode(child);
+                            if (child.id)
+                              networkRef?.current?.selectNodes([child.id]);
+                          }}
+                        >
+                          Learn more
+                        </button>
+                      </li>
                     ))}
                   </ul>
                 </div>
+              ) : null}
+
+              {selectedNode.locations.length > 0 && (
+                <>
+                  <div className="w-full h-0.5 bg-zinc-300 dark:bg-zinc-700" />
+                  <div>
+                    <strong>Called in:</strong>
+                    <ul
+                      className={`list-inside ${
+                        isDarkMode ? "text-zinc-400" : "text-zinc-600"
+                      } space-y-1 mt-1`}
+                    >
+                      {selectedNode.locations.map((loc) => (
+                        <li key={`${loc.file}:${loc.line}:${loc.column ?? 0}`}>
+                          • {loc.file.replace(/^\/tmp\/[^\/]+\//, "")}:
+                          {loc.line}:{loc.column ?? 0}
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  {selectedNode.library?.cves &&
+                    selectedNode.library.cves.length > 0 && (
+                      <div className="w-full h-0.5 bg-zinc-300 dark:bg-zinc-700" />
+                    )}
+                </>
               )}
+              {selectedNode.library?.cves &&
+                selectedNode.library.cves.length > 0 && (
+                  <div>
+                    <strong>CVEs:</strong>
+                    <ul
+                      className={`list-inside ${
+                        isDarkMode ? "text-zinc-400" : "text-zinc-600"
+                      } space-y-1 mt-1`}
+                    >
+                      {selectedNode.library.cves.map((cve) => (
+                        <CVEItem
+                          key={cve.id}
+                          cve={cve}
+                          isDarkMode={isDarkMode}
+                        />
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              {/* {selectedNode.ai_report && (
+                <div>
+                  <strong>AI Report:</strong>
+                  <p>{selectedNode.ai_report}</p>
+                </div>
+              )} */}
             </div>
           ) : (
             <p className="text-zinc-500">No function selected</p>
@@ -636,28 +752,17 @@ export default function Page() {
         </div>
       </div>
 
-      {/* Loading Modals */}
+      {/* Modals */}
       <Modal
         open={loading}
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
+        sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
       >
         <div
-          className={`p-6 rounded-2xl flex flex-col items-center ${
-            isDarkMode
-              ? "bg-zinc-900/90 backdrop-blur-md"
-              : "bg-white/90 backdrop-blur-sm"
-          } shadow-lg`}
+          className={`p-6 rounded-2xl flex flex-col items-center ${isDarkMode ? "bg-zinc-900/90 backdrop-blur-md" : "bg-white/90 backdrop-blur-sm"} shadow-lg`}
         >
-          <div className="loader mb-4"></div>
           <CircularProgress />
           <p
-            className={`text-lg mt-3 ${
-              isDarkMode ? "text-zinc-300" : "text-zinc-700"
-            }`}
+            className={`text-lg mt-3 ${isDarkMode ? "text-zinc-300" : "text-zinc-700"}`}
           >
             Analyzing project...
           </p>
@@ -666,35 +771,58 @@ export default function Page() {
 
       <Modal
         open={loadingGenerateReport}
-        sx={{
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-        }}
+        sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
       >
         <div
-          className={`p-6 rounded-2xl flex flex-col items-center ${
-            isDarkMode
-              ? "bg-zinc-900/90 backdrop-blur-md"
-              : "bg-white/90 backdrop-blur-sm"
-          } shadow-lg`}
+          className={`p-6 rounded-2xl flex flex-col items-center ${isDarkMode ? "bg-zinc-900/90 backdrop-blur-md" : "bg-white/90 backdrop-blur-sm"} shadow-lg`}
         >
-          <div className="loader mb-4"></div>
           <CircularProgress />
           <p
-            className={`text-lg mt-3 ${
-              isDarkMode ? "text-zinc-300" : "text-zinc-700"
-            }`}
+            className={`text-lg mt-3 ${isDarkMode ? "text-zinc-300" : "text-zinc-700"}`}
           >
             Generating report...
           </p>
+        </div>
+      </Modal>
+      <Modal
+        open={openSelectFolderModal}
+        onClose={() => setOpenSelectFolderModal(false)}
+        sx={{ display: "flex", alignItems: "center", justifyContent: "center" }}
+      >
+        <div
+          className={`p-6 rounded-2xl flex flex-col items-center gap-4 ${
+            isDarkMode
+              ? "bg-zinc-900/90 backdrop-blur-md"
+              : "bg-white/90 backdrop-blur-sm"
+          } shadow-lg pt-10`}
+        >
+          <ModalClose onClick={() => setOpenSelectFolderModal(false)} />
+
+          <Hero
+            title="C/C++ CVE Vulnerability Detection"
+            descriptive="Secure & Private"
+            description="Select your project folder to analyze its vulnerabilities. Your code remains private and is only used for analysis."
+            isBlackTheme={isDarkMode}
+            bouton2OnClick={() => folderInputRef.current?.click()}
+            bouton2Text="Browse Folder"
+            isTopPage={true}
+          />
         </div>
       </Modal>
 
       <AiReportModal
         openModalAiReport={openModalAiReport}
         setOpenModalAiReport={setOpenModalAiReport}
-        aiReport={aiReport}
+        aiScore={projectInfo?.call_graph?.global_score || null}
+        aiReport={unwrapMarkdownBlock(
+          projectInfo?.call_graph?.global_report || "",
+        )}
+      />
+      <AiReportModal
+        openModalAiReport={!!showAiReport}
+        setOpenModalAiReport={() => setShowAiReport(null)}
+        aiScore={showAiReport?.ai_vulnerability_score || null}
+        aiReport={unwrapMarkdownBlock(showAiReport?.ai_report || "")}
       />
     </div>
   );

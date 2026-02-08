@@ -10,12 +10,14 @@ import { Literal, Parent } from "unist";
 type AiReportModalProps = {
   openModalAiReport: boolean;
   setOpenModalAiReport: (open: boolean) => void;
+  aiScore: number | null;
   aiReport: string | null;
 };
 
 export default function AiReportModal({
   openModalAiReport,
   setOpenModalAiReport,
+  aiScore,
   aiReport,
 }: AiReportModalProps) {
   return (
@@ -33,12 +35,29 @@ export default function AiReportModal({
       <div className="bg-white text-gray-900 rounded-xl shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-200">
         {/* Header */}
         <div className="flex justify-between items-center px-6 py-3 border-b border-gray-200">
-          <h2 className="text-xl font-semibold tracking-tight">
-            AI Vulnerability Report
-          </h2>
+          <div>
+            <h2 className="text-xl font-semibold tracking-tight">
+              AI Vulnerability Report
+            </h2>
+            <div className="flex items-center space-x-4">
+              {aiScore !== null && (
+                <div
+                  className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    aiScore >= 7
+                      ? "bg-red-100 text-red-800"
+                      : aiScore >= 4
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-green-100 text-green-800"
+                  }`}
+                >
+                  Score: {aiScore.toFixed(1)} / 10
+                </div>
+              )}
+            </div>
+          </div>
           <button
             onClick={() => setOpenModalAiReport(false)}
-            className="text-gray-400 hover:text-gray-700 transition-colors"
+            className="text-gray-400 hover:text-gray-700 transition-colors cursor-pointer"
             aria-label="Close modal"
           >
             ✕
@@ -85,7 +104,7 @@ export default function AiReportModal({
                         className="absolute top-2 right-2 text-gray-400 hover:text-white bg-gray-700 bg-opacity-30 rounded px-2 py-1 text-xs font-mono transition-colors"
                         onClick={() =>
                           navigator.clipboard.writeText(
-                            String(children).replace(/\n$/, "")
+                            String(children).replace(/\n$/, ""),
                           )
                         }
                       >

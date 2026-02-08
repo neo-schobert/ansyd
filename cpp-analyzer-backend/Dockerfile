@@ -23,7 +23,7 @@ RUN pip install --no-cache-dir clang==19.1.7
 COPY src/ ./src
 
 # Cloner Exploit-DB dans src/
-RUN git clone --depth=1 https://gitlab.com/exploit-database/exploitdb.git ./src/exploitdb
+RUN git clone --depth=1 https://gitlab.com/exploit-database/exploitdb.git ./src/classes/exploitdb
 
 
 EXPOSE 8000
@@ -36,4 +36,9 @@ CMD ["uvicorn", "src.server:app", "--host", "0.0.0.0", "--port", "8000"]
 # docker tag cpp-analyzer-backend europe-west1-docker.pkg.dev/ansyd-lab/docker-backend/cpp-analyzer-backend:latest
 # docker push europe-west1-docker.pkg.dev/ansyd-lab/docker-backend/cpp-analyzer-backend:latest
 
-# gcloud run deploy cpp-analyzer-backend --image europe-west1-docker.pkg.dev/ansyd-lab/docker-backend/cpp-analyzer-backend:latest --region europe-west1 --platform managed --allow-unauthenticated --port 8000 --set-env-vars OPENROUTER_API_KEY="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"
+# gcloud run deploy cpp-analyzer-backend --image europe-west1-docker.pkg.dev/ansyd-lab/docker-backend/cpp-analyzer-backend:latest --region europe-west1 --platform managed --allow-unauthenticated --port 8000 --set-env-vars OPENROUTER_API_KEY="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"
+
+
+# LOCAL
+# docker build -t cpp-analyzer-backend .   
+# docker run -p 8000:8000 -e OPENROUTER_API_KEY="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" -e MODEL_NAME="deepseek/deepseek-chat" cpp-analyzer-backend

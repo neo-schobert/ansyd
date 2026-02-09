@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import JSZip from "jszip";
 import { Network, DataSet } from "vis-network/standalone";
 import "vis-network/styles/vis-network.css";
@@ -9,6 +9,8 @@ import CVEItem from "@/components/Item/CVEItem";
 import AiReportModal from "@/components/Modal/AiReportModal";
 import DarkModeToggle from "@/components/Button/DarkModeToggle";
 import Hero from "@/components/Hero/Hero";
+import ConfigMenu from "@/components/Button/ConfigMenu";
+import { useSearchParams } from "next/navigation";
 declare module "react" {
   interface InputHTMLAttributes<T> {
     webkitdirectory?: boolean;
@@ -278,6 +280,13 @@ function buildGraph(
 ===================== */
 
 export default function Page() {
+  const searchParams = useSearchParams();
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  useEffect(() => {
+    const dm = searchParams.get("isDarkModeInit");
+    setIsDarkMode(dm === "true");
+  }, [searchParams]);
   const folderInputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const networkRef = useRef<Network | null>(null);
@@ -285,7 +294,6 @@ export default function Page() {
   const [files, setFiles] = useState<FileList | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingGenerateReport, setLoadingGenerateReport] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const [openModalAiReport, setOpenModalAiReport] = useState(false);
   const [showAiReport, setShowAiReport] = useState<CallGraphNode | null>(null);
   const [projectInfo, setProjectInfo] = useState<ProjectInfos | null>(null);
@@ -489,8 +497,10 @@ export default function Page() {
     <div
       className={`min-h-screen p-8 flex flex-col md:flex-row gap-6 ${isDarkMode ? "bg-zinc-950 text-white" : "bg-gray-100 text-gray-900"}`}
     >
-      <DarkModeToggle isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
-
+      <div className="fixed top-4 right-4 z-50 gap-4 flex items-center">
+        <DarkModeToggle isDarkMode={isDarkMode} setIsDarkMode={setIsDarkMode} />
+        <ConfigMenu isDarkMode={isDarkMode} />
+      </div>
       {/* Main Content */}
       <div className="flex-1 flex flex-col gap-6">
         <h1 className="text-4xl font-extrabold mb-6 tracking-tight">

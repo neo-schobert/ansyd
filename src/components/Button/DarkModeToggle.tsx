@@ -11,7 +11,7 @@ export default function DarkModeToggle({
   return (
     <button
       onClick={() => setIsDarkMode(!isDarkMode)}
-      className="fixed top-4 right-4 z-50 p-3 rounded-full cursor-pointer transition-colors shadow-md hover:shadow-lg focus:outline-none"
+      className="p-3 rounded-full cursor-pointer transition-colors shadow-md hover:shadow-lg focus:outline-none"
       style={{
         backgroundColor: isDarkMode ? "#facc15" : "#1f2937",
         color: isDarkMode ? "#1f2937" : "#facc15",

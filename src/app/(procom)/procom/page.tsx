@@ -173,6 +173,8 @@ export function vulnerabilityLabel(node: CallGraphNode): string {
 ===================== */
 
 const LOCAL_URL = "http://localhost:8000";
+const CLOUD_URL =
+  "https://cpp-analyzer-backend-531057961347.europe-west1.run.app";
 
 const hasVulnerabilitiesRecursively = (
   node: CallGraphNode,
@@ -399,7 +401,7 @@ export default function Page() {
       const formData = new FormData();
       formData.append("project", zipBlob, "project.zip");
 
-      const res = await fetch(`${LOCAL_URL}/analyze`, {
+      const res = await fetch(`${CLOUD_URL}/analyze`, {
         method: "POST",
         body: formData,
       });
@@ -438,7 +440,7 @@ export default function Page() {
       if (selectedNode)
         formData.append("selectedNode", JSON.stringify(selectedNode));
 
-      const res = await fetch(`${LOCAL_URL}/llm_generate_report`, {
+      const res = await fetch(`${CLOUD_URL}/llm_generate_report`, {
         method: "POST",
         body: formData,
       });

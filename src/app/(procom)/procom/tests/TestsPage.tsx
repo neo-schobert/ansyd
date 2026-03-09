@@ -132,7 +132,7 @@ export default function TestsPage({
       // Liste de strings — ajouter chaque modèle séparément
       judgeModels.forEach((model) => formData.append("judgeModels", model));
 
-      const response = await fetch(`${LOCAL_URL}/test_results`, {
+      const response = await fetch(`${CLOUD_URL}/test_results`, {
         method: "POST",
         body: formData,
       });

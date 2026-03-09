@@ -48,6 +48,13 @@ export type JudgedCallGraphNode = CallGraphNode & {
   judge_global_ai_metric_scores?: JudgeMetricScores;
   judge_ai_global_reports?: JudgeReports;
   judge_ai_global_scores?: JudgeScores;
+  // Phase-2 revised scores (after peer review)
+  judge_revised_scores?: JudgeScores;
+  judge_revised_global_scores?: JudgeScores;
+  // Phase-3 consensus outputs
+  consensus_local_score?: number | null;
+  consensus_global_score?: number | null;
+  consensus_report?: string | null;
 };
 
 export type TestResult = {
@@ -171,6 +178,42 @@ function DeltaBadge({
   );
 }
 
+/** Shows whether a consensus was reached and how tight the spread is */
+function ConsensusBadge({
+  node,
+  global = false,
+}: {
+  node: JudgedCallGraphNode;
+  global?: boolean;
+}) {
+  const spread = scoreSpread(node, global);
+  const consensus = hasConsensus(node, global);
+
+  if (spread === null) return null;
+
+  // Tight consensus: spread ≤ 1.5  →  green lock
+  // Moderate:        spread ≤ 3.0  →  yellow ~
+  // Divergent:       spread  > 3.0 →  red !
+  const tight = spread <= 1.5;
+  const moderate = spread <= 3.0;
+  const color = tight ? "#16a34a" : moderate ? "#eab308" : "#dc2626";
+  const icon = tight ? "🔒" : moderate ? "~" : "⚡";
+  const label = `spread ${spread.toFixed(1)}`;
+  const title = consensus
+    ? `Consensus reached — score spread: ${spread.toFixed(1)}`
+    : `Revised scores spread: ${spread.toFixed(1)} (no consensus synthesis)`;
+
+  return (
+    <span
+      className="text-xs font-mono px-1 rounded border"
+      style={{ color, borderColor: color, opacity: 0.85 }}
+      title={title}
+    >
+      {icon} {label}
+    </span>
+  );
+}
+
 /** Markdown modal */
 function ReportModal({
   open,
@@ -238,16 +281,47 @@ function collectJudgedNodes(
   return results;
 }
 
+/** Best available local score: consensus → revised median → simple avg */
 function judgeAvgScore(node: JudgedCallGraphNode): number | null {
+  if (node.consensus_local_score != null) return node.consensus_local_score;
+  const revised = Object.values(node.judge_revised_scores ?? {});
+  if (revised.length) {
+    const sorted = [...revised].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  }
   const scores = Object.values(node.judge_ai_vulnerability_scores ?? {});
   if (!scores.length) return null;
   return scores.reduce((a, b) => a + b, 0) / scores.length;
 }
 
+/** Best available global score: consensus → revised median → simple avg */
 function judgeAvgGlobalScore(node: JudgedCallGraphNode): number | null {
+  if (node.consensus_global_score != null) return node.consensus_global_score;
+  const revised = Object.values(node.judge_revised_global_scores ?? {});
+  if (revised.length) {
+    const sorted = [...revised].sort((a, b) => a - b);
+    return sorted[Math.floor(sorted.length / 2)];
+  }
   const scores = Object.values(node.judge_ai_global_scores ?? {});
   if (!scores.length) return null;
   return scores.reduce((a, b) => a + b, 0) / scores.length;
+}
+
+/** Spread of revised scores — indicates consensus quality */
+function scoreSpread(node: JudgedCallGraphNode, global = false): number | null {
+  const raw = global
+    ? node.judge_revised_global_scores
+    : node.judge_revised_scores;
+  const scores = Object.values(raw ?? {});
+  if (scores.length < 2) return null;
+  return Math.max(...scores) - Math.min(...scores);
+}
+
+/** True when we have a Phase-3 consensus score */
+function hasConsensus(node: JudgedCallGraphNode, global = false): boolean {
+  return global
+    ? node.consensus_global_score != null
+    : node.consensus_local_score != null;
 }
 
 /* ─────────────────────────────────────────
@@ -294,7 +368,7 @@ function TestOverview({
             </p>
             <p className="font-bold text-base mb-1">{test.tested_model}</p>
             {globalTested !== null && (
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 flex-wrap">
                 <ScorePill score={globalTested} />
                 {globalJudgeAvg !== null && (
                   <DeltaBadge tested={globalTested} judgeAvg={globalJudgeAvg} />
@@ -316,7 +390,33 @@ function TestOverview({
             )}
           </div>
 
-          {/* Judges */}
+          {/* Consensus score (Phase-3) */}
+          {globalJudgeAvg !== null && (
+            <div>
+              <p className="text-xs font-mono opacity-50 mb-1 uppercase tracking-widest">
+                {hasConsensus(cg, true) ? "Consensus Score" : "Revised Median"}
+              </p>
+              <div className="flex items-center gap-2 flex-wrap">
+                <ScorePill score={globalJudgeAvg} />
+                <ConsensusBadge node={cg} global />
+                {cg.consensus_report && (
+                  <button
+                    onClick={() =>
+                      setReportModal({
+                        title: "Consensus Report",
+                        content: cg.consensus_report!,
+                      })
+                    }
+                    className="text-xs opacity-50 hover:opacity-100 underline cursor-pointer"
+                  >
+                    read consensus
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Judges — show revised score if available */}
           {judgeModels.length > 0 && (
             <div>
               <p className="text-xs font-mono opacity-50 mb-2 uppercase tracking-widest">
@@ -324,13 +424,32 @@ function TestOverview({
               </p>
               <div className="flex flex-wrap gap-4">
                 {judgeModels.map((m) => {
-                  const s = cg.judge_ai_global_scores?.[m];
+                  const initial = cg.judge_ai_global_scores?.[m];
+                  const revised = cg.judge_revised_global_scores?.[m];
                   return (
                     <div key={m} className="flex flex-col gap-1 items-start">
                       <span className="text-xs opacity-60 font-mono truncate max-w-[140px]">
                         {m}
                       </span>
-                      {s !== undefined && <ScorePill score={s} size="sm" />}
+                      <div className="flex items-center gap-1">
+                        {revised !== undefined ? (
+                          <>
+                            <ScorePill score={revised} size="sm" />
+                            <span className="text-[10px] opacity-40">rev</span>
+                          </>
+                        ) : (
+                          initial !== undefined && (
+                            <ScorePill score={initial} size="sm" />
+                          )
+                        )}
+                        {revised !== undefined &&
+                          initial !== undefined &&
+                          Math.abs(revised - initial) >= 0.5 && (
+                            <span className="text-[10px] opacity-50 font-mono">
+                              (was {initial.toFixed(1)})
+                            </span>
+                          )}
+                      </div>
                       {cg.judge_ai_global_reports?.[m] && (
                         <button
                           onClick={() =>
@@ -403,11 +522,11 @@ function TestOverview({
             {/* Header row */}
             <div
               className={`grid text-xs font-mono opacity-40 uppercase tracking-wider px-3 py-1`}
-              style={{ gridTemplateColumns: "1fr 100px 100px 80px 80px" }}
+              style={{ gridTemplateColumns: "1fr 100px 110px 80px 80px" }}
             >
               <span>Function</span>
               <span className="text-center">Tested</span>
-              <span className="text-center">Judge Avg</span>
+              <span className="text-center">Consensus</span>
               <span className="text-center">Delta</span>
               <span className="text-center">CVEs</span>
             </div>
@@ -434,7 +553,7 @@ function TestOverview({
                         ? `${card} hover:border-zinc-600`
                         : `${card} hover:border-gray-400`
                   }`}
-                  style={{ gridTemplateColumns: "1fr 100px 100px 80px 80px" }}
+                  style={{ gridTemplateColumns: "1fr 100px 110px 80px 80px" }}
                 >
                   {/* Function name + library */}
                   <div className="min-w-0">
@@ -457,10 +576,13 @@ function TestOverview({
                     )}
                   </div>
 
-                  {/* Judge avg */}
-                  <div className="flex justify-center">
+                  {/* Consensus / revised median score + spread badge */}
+                  <div className="flex flex-col items-center gap-0.5">
                     {jAvg !== null ? (
-                      <ScorePill score={jAvg} size="sm" />
+                      <>
+                        <ScorePill score={jAvg} size="sm" />
+                        <ConsensusBadge node={node} />
+                      </>
                     ) : (
                       <span className="opacity-30 text-xs">—</span>
                     )}
@@ -606,17 +728,35 @@ function NodeDetailSidebar({
           </div>
         )}
 
-        {/* Each judge */}
+        {/* Each judge — initial → revised */}
         {judgeModels.map((m) => {
-          const s = node.judge_ai_vulnerability_scores?.[m];
+          const initial = node.judge_ai_vulnerability_scores?.[m];
+          const revised = node.judge_revised_scores?.[m];
+          const displayScore = revised ?? initial;
+          const changed =
+            revised !== undefined &&
+            initial !== undefined &&
+            Math.abs(revised - initial) >= 0.5;
           return (
             <div key={m} className="mb-3">
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs opacity-50 truncate max-w-[160px] font-mono">
+                <span className="text-xs opacity-50 truncate max-w-[140px] font-mono">
                   {m}
                 </span>
-                <div className="flex items-center gap-2">
-                  {s !== undefined && <ScorePill score={s} size="sm" />}
+                <div className="flex items-center gap-1.5">
+                  {displayScore !== undefined && (
+                    <ScorePill score={displayScore} size="sm" />
+                  )}
+                  {revised !== undefined && (
+                    <span className="text-[10px] font-mono opacity-50">
+                      rev
+                    </span>
+                  )}
+                  {changed && initial !== undefined && (
+                    <span className="text-[10px] font-mono opacity-40">
+                      (was {initial.toFixed(1)})
+                    </span>
+                  )}
                   {node.judge_ai_reports?.[m] && (
                     <button
                       onClick={() =>
@@ -632,19 +772,39 @@ function NodeDetailSidebar({
                   )}
                 </div>
               </div>
-              {s !== undefined && <ScoreBar score={s} />}
+              {displayScore !== undefined && <ScoreBar score={displayScore} />}
             </div>
           );
         })}
+
+        {/* Consensus row */}
+        {node.consensus_local_score != null && (
+          <div
+            className={`mt-1 mb-3 p-2 rounded-lg border ${dk ? "border-blue-500/30 bg-blue-500/5" : "border-blue-300 bg-blue-50"}`}
+          >
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-xs font-mono font-semibold opacity-70">
+                Consensus
+              </span>
+              <div className="flex items-center gap-2">
+                <ScorePill score={node.consensus_local_score} size="sm" />
+                <ConsensusBadge node={node} />
+              </div>
+            </div>
+            <ScoreBar score={node.consensus_local_score} />
+          </div>
+        )}
 
         {/* Delta summary */}
         {testedScore !== null && jAvg !== null && (
           <div
             className={`mt-2 p-2 rounded-lg border ${dk ? "border-zinc-700 bg-zinc-800/50" : "border-gray-200 bg-gray-50"} text-xs`}
           >
-            <span className="opacity-50">vs. judge avg </span>
+            <span className="opacity-50">
+              vs. {hasConsensus(node) ? "consensus" : "revised median"}{" "}
+            </span>
             <DeltaBadge tested={testedScore} judgeAvg={jAvg} />
-            <span className="opacity-50 ml-2">({jAvg.toFixed(1)} avg)</span>
+            <span className="opacity-50 ml-2">({jAvg.toFixed(1)})</span>
           </div>
         )}
       </div>
@@ -1031,7 +1191,7 @@ export default function TestsPage({
               Judge Models
             </Typography>
             <Stack spacing={0.5}>
-              {(defaultJudgeModels ?? []).map((m) => (
+              {(defaultJudgeModels ?? []).map((m: string) => (
                 <Checkbox
                   key={m}
                   label={m}

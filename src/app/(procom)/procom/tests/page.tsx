@@ -4,34 +4,45 @@ const LOCAL_URL = "http://localhost:8000";
 const CLOUD_URL =
   "https://cpp-analyzer-backend-531057961347.europe-west1.run.app";
 
-// Définir un type pour la nouvelle réponse
 type TestResultsResponse = {
   results: Record<string, TestResult>;
-  models: string[];
+  testModels: string[];
+  judgeModels: string[];
 };
 
-// Fetch côté serveur
-async function getTests(): Promise<{ tests: TestResult[]; models: string[] }> {
+async function getTests(): Promise<{
+  tests: TestResult[];
+  testModels: string[];
+  judgeModels: string[];
+}> {
   try {
-    const res = await fetch(`${CLOUD_URL}/test_results`, {
-      cache: "no-store",
-    });
-    if (!res.ok) throw new Error("Failed to fetch tests");
+    const res = await fetch(`${CLOUD_URL}/test_results`, { cache: "no-store" });
+
+    if (!res.ok) {
+      console.error(`[getTests] HTTP ${res.status}: ${res.statusText}`);
+      return { tests: [], testModels: [], judgeModels: [] };
+    }
 
     const data = (await res.json()) as TestResultsResponse;
 
-    const tests = Object.values(data.results);
-    const models = data.models;
-
-    return { tests, models };
+    return {
+      tests: Object.values(data.results ?? {}),
+      testModels: Array.isArray(data.testModels) ? data.testModels : [],
+      judgeModels: Array.isArray(data.judgeModels) ? data.judgeModels : [],
+    };
   } catch (e) {
-    console.error("Error fetching tests:", e);
-    return { tests: [], models: [] };
+    console.error("[getTests] Error:", e);
+    return { tests: [], testModels: [], judgeModels: [] };
   }
 }
 
 export default async function Page() {
-  const { tests: serverTests, models } = await getTests();
-
-  return <TestsPage serverTests={serverTests} models={models} />;
+  const { tests, testModels, judgeModels } = await getTests();
+  return (
+    <TestsPage
+      serverTests={tests}
+      testModels={testModels}
+      defaultJudgeModels={judgeModels}
+    />
+  );
 }

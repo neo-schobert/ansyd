@@ -13,7 +13,7 @@ type TestResultsResponse = {
 // Fetch côté serveur
 async function getTests(): Promise<{ tests: TestResult[]; models: string[] }> {
   try {
-    const res = await fetch(`${LOCAL_URL}/test_results`, {
+    const res = await fetch(`${CLOUD_URL}/test_results`, {
       cache: "no-store",
     });
     if (!res.ok) throw new Error("Failed to fetch tests");
